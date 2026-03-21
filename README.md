@@ -5,7 +5,8 @@
 
 ## Table of Contents
 
-1. [Starting the Application](#1-starting-the-application)
+0. [Fresh Setup — First Time on a New Machine](#0-fresh-setup--first-time-on-a-new-machine)
+1. [Starting the Application — Returning Developer](#1-starting-the-application--returning-developer)
 2. [Project Structure](#2-project-structure)
 3. [Settings — config/settings.py](#3-settings--configsettingspy)
 4. [Database Schema — All Models](#4-database-schema--all-models)
@@ -21,7 +22,295 @@
 
 ---
 
-## 1. Starting the Application
+## 0. Fresh Setup — First Time on a New Machine
+
+Follow this section **only once** when you first clone the repository onto a machine that has never run this project before. After completing it, use Section 1 for all future startups.
+
+---
+
+### Step 0 — Check system requirements
+
+You need Python 3.10+, PostgreSQL 14+, and Git. Check what you have:
+
+```bash
+python3 --version
+psql --version
+git --version
+```
+
+**If Python 3.10+ is not installed:**
+
+```bash
+brew install python@3.12
+```
+
+**If PostgreSQL is not installed:**
+
+```bash
+brew install postgresql@17
+brew services start postgresql@17
+echo 'export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Verify PostgreSQL is running:
+
+```bash
+psql --version   # should print version string
+```
+
+---
+
+### Step 1 — Clone the repository
+
+```bash
+git clone <your-repo-url>
+cd cs308-store
+```
+
+---
+
+### Step 2 — Create and activate the virtual environment
+
+The virtual environment is not included in the repo (it is gitignored). You must create it yourself.
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Your terminal prompt should now show `(venv)` at the start. **You must activate the venv every time you open a new terminal.** Without it, Python cannot find any of the installed packages.
+
+---
+
+### Step 3 — Install all dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This reads the pinned package versions from `requirements.txt` and installs everything: Django, Django REST Framework, psycopg, JWT, CORS headers, Pillow, and python-dotenv.
+
+Verify it worked:
+
+```bash
+python -c "import django; print(django.__version__)"
+```
+
+---
+
+### Step 4 — Create the PostgreSQL user and database
+
+This only needs to be done once per machine. Open the PostgreSQL interactive shell:
+
+```bash
+psql postgres
+```
+
+Inside the shell, run these four commands one by one:
+
+```sql
+CREATE USER project_admin WITH PASSWORD 'yourpassword123';
+CREATE DATABASE cs308_db OWNER project_admin;
+GRANT ALL PRIVILEGES ON DATABASE cs308_db TO project_admin;
+\q
+```
+
+Verify the connection works:
+
+```bash
+psql -U project_admin -d cs308_db -c "SELECT version();"
+```
+
+If this returns a version string, the database is ready. If it says "password authentication failed", double-check you typed the password correctly in the CREATE USER step.
+
+---
+
+### Step 5 — Create the .env file
+
+The `.env` file holds all secrets and is never committed to git. You must create it manually:
+
+```bash
+# Make sure you are inside backend/
+touch .env
+```
+
+Open it in any text editor and paste the following, replacing the password with what you used in Step 4:
+
+```env
+SECRET_KEY=django-insecure-replace-this-with-a-real-secret-key-in-production
+DEBUG=True
+DB_NAME=cs308_db
+DB_USER=project_admin
+DB_PASSWORD=yourpassword123
+DB_HOST=localhost
+DB_PORT=5432
+ALLOWED_HOSTS=localhost,127.0.0.1
+```
+
+To generate a proper `SECRET_KEY` (recommended):
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Copy the output and paste it as the `SECRET_KEY` value in your `.env` file.
+
+---
+
+### Step 6 — Run database migrations
+
+Migrations create all the tables in your PostgreSQL database. Run them in this exact order:
+
+```bash
+python manage.py makemigrations users
+python manage.py makemigrations products
+python manage.py makemigrations orders
+python manage.py migrate
+```
+
+You should see output like:
+
+```
+Applying users.0001_initial... OK
+Applying products.0001_initial... OK
+Applying orders.0001_initial... OK
+...
+```
+
+Verify the tables were created:
+
+```bash
+psql -U project_admin -d cs308_db -c "\dt"
+```
+
+You should see tables including `users`, `brands`, `sneakers`, `orders`, `invoices`, `deliveries`, and several token blacklist tables.
+
+---
+
+### Step 7 — Create a superuser
+
+This creates an admin account for the Django admin panel at `/admin/`:
+
+```bash
+python manage.py createsuperuser
+```
+
+You will be prompted to enter:
+- Email address
+- Username
+- First name
+- Last name
+- Password (and confirmation)
+
+This superuser can log into `/admin/` and create sales manager and product manager accounts.
+
+---
+
+### Step 8 — Start the server
+
+```bash
+python manage.py runserver
+```
+
+Expected output:
+
+```
+Watching for file changes with StatReloader
+Performing system checks...
+System check identified no issues (0 silenced).
+Django version 5.x.x, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CONTROL-C.
+```
+
+The API is now live. Open your browser and go to:
+
+- `http://127.0.0.1:8000/admin/` — Django admin panel (log in with your superuser)
+- `http://127.0.0.1:8000/api/products/sneakers/` — sneaker list (returns empty array, no data yet)
+
+> **Note:** Visiting `http://127.0.0.1:8000/` will show a 404 page — this is expected. The root path has no view. All API routes start with `/api/`.
+
+---
+
+### Step 9 — (Optional) Populate test data
+
+To fill the database with sample brands, categories, sneakers, and test user accounts:
+
+```bash
+python manage.py shell < seed.py
+```
+
+After seeding, you can log in immediately with:
+
+| Email | Password | Role |
+|-------|----------|------|
+| `customer@test.com` | `TestPass123!` | Customer |
+| `sales@test.com` | `TestPass123!` | Sales Manager |
+| `product@test.com` | `TestPass123!` | Product Manager |
+
+---
+
+### Full Command Summary (copy-paste reference)
+
+```bash
+# Clone and enter the project
+git clone <your-repo-url>
+cd cs308-store/backend
+
+# Virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install packages
+pip install -r requirements.txt
+
+# PostgreSQL setup (run once — inside psql postgres shell)
+# CREATE USER project_admin WITH PASSWORD 'yourpassword123';
+# CREATE DATABASE cs308_db OWNER project_admin;
+# GRANT ALL PRIVILEGES ON DATABASE cs308_db TO project_admin;
+# \q
+
+# Create .env file (see Step 5 for contents)
+touch .env
+
+# Migrations
+python manage.py makemigrations users
+python manage.py makemigrations products
+python manage.py makemigrations orders
+python manage.py migrate
+
+# Create admin account
+python manage.py createsuperuser
+
+# Start server
+python manage.py runserver
+
+# Optional: seed test data
+python manage.py shell < seed.py
+```
+
+---
+
+### Fresh Setup Troubleshooting
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `python3: command not found` | Python not installed | `brew install python@3.12` |
+| `No such file or directory: venv/bin/activate` | venv was never created | `python3 -m venv venv` then activate |
+| `ModuleNotFoundError: No module named 'django'` | packages not installed or venv not active | `source venv/bin/activate` then `pip install -r requirements.txt` |
+| `could not connect to server` | PostgreSQL not running | `brew services start postgresql@17` |
+| `FATAL: role "project_admin" does not exist` | DB user not created | Run Step 4 again inside `psql postgres` |
+| `FATAL: database "cs308_db" does not exist` | DB not created | Run Step 4 again |
+| `FATAL: password authentication failed` | Wrong password in `.env` | Make sure `DB_PASSWORD` in `.env` matches what you used in `CREATE USER` |
+| `KeyError: 'SECRET_KEY'` | `.env` file missing or not in `backend/` | Create `backend/.env` with all variables from Step 5 |
+| `django.db.utils.ProgrammingError: relation does not exist` | Migrations not applied | `python manage.py migrate` |
+| `That port is already in use` | Another process on port 8000 | `python manage.py runserver 8001` to use a different port |
+
+---
+
+## 1. Starting the Application — Returning Developer
 
 ### Prerequisites
 
@@ -198,10 +487,11 @@ load_dotenv()
 All secrets are loaded from `backend/.env`. This file is never committed to git. The `.env` file looks like:
 
 ```env
-SECRET_KEY=yd)pphi&5=aqrk^gkxl1a4_^&31a%cw^%j8zkeimmq_(b_bb%%
+SECRET_KEY=django-insecure-...
+DEBUG=True
 DB_NAME=cs308_db
 DB_USER=project_admin
-DB_PASSWORD=9516
+DB_PASSWORD=yourpassword123
 DB_HOST=localhost
 DB_PORT=5432
 ALLOWED_HOSTS=localhost,127.0.0.1
