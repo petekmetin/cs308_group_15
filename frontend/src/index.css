@@ -1,0 +1,425 @@
+/* ============================================================
+   index.css — Global Styles for SoleVault
+   ============================================================
+   This file styles the entire app. It is imported once in
+   main.jsx and applies to all components.
+
+   Design system:
+   - Dark background (#0a0a0a) — easy on the eyes
+   - Neon green accent (#c8ff00) — SoleVault brand colour
+   - White text (#f5f5f5) — high contrast on dark background
+   - Two fonts:
+       "Outfit"     → body text (clean and modern)
+       "Space Mono" → prices, logo (monospace = technical look)
+
+   CSS custom properties (variables):
+   We define colours and values as variables (--name: value) so
+   we can change the whole theme by editing just this block.
+   ============================================================ */
+
+/* ── Reset & Root Variables ──────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* padding/border are included in element size */
+}
+
+:root {
+  --bg:          #0a0a0a;  /* page background */
+  --surface:     #141414;  /* card backgrounds */
+  --surface2:    #1e1e1e;  /* slightly lighter surfaces */
+  --border:      #2a2a2a;  /* subtle borders */
+  --text:        #f5f5f5;  /* primary text */
+  --text-dim:    #888888;  /* secondary / muted text */
+  --accent:      #c8ff00;  /* SoleVault neon green */
+  --danger:      #ff4d4d;  /* error states */
+  --radius:      10px;     /* default border-radius */
+  --font:        'Outfit', sans-serif;
+  --mono:        'Space Mono', monospace;
+}
+
+body {
+  background-color: var(--bg);
+  color:            var(--text);
+  font-family:      var(--font);
+  min-height:       100vh;
+  -webkit-font-smoothing: antialiased; /* smoother fonts on Mac */
+}
+
+/* ── Page wrapper ────────────────────────────────────────── */
+/* Used by HomePage — fills the screen, flex column layout */
+.page {
+  display:        flex;
+  flex-direction: column;
+  min-height:     100vh;
+}
+
+/* ── Navbar ──────────────────────────────────────────────── */
+/*
+  The navbar is "fixed" so it stays at the top while scrolling.
+  z-index: 100 keeps it on top of all other content.
+*/
+.navbar {
+  position:        fixed;
+  top:             0;
+  left:            0;
+  right:           0;
+  z-index:         100;
+  height:          64px;
+  background:      rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(16px);              /* frosted glass effect */
+  border-bottom:   1px solid var(--border);
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         0 32px;
+}
+
+/* Brand/logo text in the navbar */
+.nav-brand {
+  font-family:    var(--mono);
+  font-size:      1.15rem;
+  font-weight:    700;
+  letter-spacing: 1px;
+}
+
+/* The accent part of the logo: SOLE[VAULT] */
+.nav-brand-accent {
+  color: var(--accent);
+}
+
+/* Right side of navbar: username + sign-out */
+.nav-right {
+  display:     flex;
+  align-items: center;
+  gap:         16px;
+}
+
+/* Displayed username text */
+.nav-username {
+  font-size:  0.9rem;
+  color:      var(--text-dim);
+}
+
+/* Sign out button */
+.nav-logout-btn {
+  background:    transparent;
+  border:        1px solid var(--border);
+  color:         var(--text);
+  padding:       6px 14px;
+  border-radius: var(--radius);
+  font-family:   var(--font);
+  font-size:     0.85rem;
+  cursor:        pointer;
+  transition:    border-color 0.2s, color 0.2s;
+}
+
+.nav-logout-btn:hover {
+  border-color: var(--accent);
+  color:        var(--accent);
+}
+
+/* ── Home Page Content ───────────────────────────────────── */
+/*
+  padding-top: 80px pushes content below the fixed 64px navbar.
+  Without this, the navbar would cover the top of the content.
+*/
+.home-content {
+  padding:    80px 32px 48px;
+  max-width:  1200px;
+  margin:     0 auto; /* center horizontally */
+  width:      100%;
+}
+
+/* ── Welcome Banner ──────────────────────────────────────── */
+.welcome-banner {
+  margin-bottom: 48px;
+  padding:       40px;
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.welcome-title {
+  font-size:     2rem;
+  font-weight:   800;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+/* The ", username" part rendered in accent colour */
+.welcome-username {
+  color: var(--accent);
+}
+
+.welcome-subtitle {
+  color:     var(--text-dim);
+  font-size: 1rem;
+}
+
+/* ── Sneaker Section ─────────────────────────────────────── */
+.sneaker-section {
+  /* nothing extra needed — grid handles layout */
+}
+
+.section-title {
+  font-size:     1.3rem;
+  font-weight:   700;
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+}
+
+/*
+  CSS Grid: automatically creates columns that are at least 260px wide.
+  "auto-fill" + "minmax" means: fill the row with as many columns as fit,
+  each at least 260px, stretching to fill the rest (1fr).
+  This is fully responsive without any media queries.
+*/
+.sneaker-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap:                   20px;
+}
+
+/* ── Sneaker Card ────────────────────────────────────────── */
+.sneaker-card {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  overflow:      hidden;
+  transition:    border-color 0.2s, transform 0.2s;
+  display:       flex;
+  flex-direction: column;
+}
+
+.sneaker-card:hover {
+  border-color: var(--accent);
+  transform:    translateY(-2px); /* subtle lift on hover */
+}
+
+/* Large emoji used as an image placeholder */
+.sneaker-emoji {
+  font-size:       4rem;
+  text-align:      center;
+  padding:         24px 0;
+  background:      var(--surface2);
+  border-bottom:   1px solid var(--border);
+}
+
+.sneaker-info {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1; /* fill remaining height so all cards are equal height */
+}
+
+/* Brand name — small caps in accent colour */
+.sneaker-brand {
+  font-size:      0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color:          var(--accent);
+  font-weight:    600;
+}
+
+.sneaker-name {
+  font-size:   1rem;
+  font-weight: 700;
+}
+
+.sneaker-description {
+  font-size:   0.85rem;
+  color:       var(--text-dim);
+  line-height: 1.4;
+  flex:        1; /* pushes footer to the bottom */
+}
+
+/* Footer row: price left, button right */
+.sneaker-footer {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  margin-top:      12px;
+}
+
+/* Price in monospace font — aligns digits nicely */
+.sneaker-price {
+  font-family: var(--mono);
+  font-size:   1.1rem;
+  font-weight: 700;
+  color:       var(--accent);
+}
+
+/* "Add to Cart" button on each card */
+.sneaker-btn {
+  background:    var(--accent);
+  color:         #000;
+  border:        none;
+  padding:       7px 14px;
+  border-radius: 6px;
+  font-family:   var(--font);
+  font-size:     0.82rem;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    opacity 0.2s;
+}
+
+.sneaker-btn:hover {
+  opacity: 0.85;
+}
+
+/* ── Auth Pages (Login & Signup) ─────────────────────────── */
+/*
+  Full-screen centred layout for the login and signup pages.
+  The card floats in the middle of the dark background.
+*/
+.auth-page {
+  min-height:      100vh;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         24px;
+  background:      var(--bg);
+}
+
+/* The white-bordered box containing the form */
+.auth-card {
+  width:         100%;
+  max-width:     420px;
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  padding:       40px 36px;
+}
+
+/* Logo at top of auth forms */
+.auth-logo {
+  font-family:    var(--mono);
+  font-size:      1.3rem;
+  font-weight:    700;
+  letter-spacing: 2px;
+  margin-bottom:  28px;
+  text-align:     center;
+}
+
+/* The [VAULT] part of the logo */
+.auth-logo span {
+  color: var(--accent);
+}
+
+.auth-title {
+  font-size:     1.6rem;
+  font-weight:   800;
+  margin-bottom: 6px;
+}
+
+.auth-subtitle {
+  color:         var(--text-dim);
+  font-size:     0.9rem;
+  margin-bottom: 28px;
+}
+
+/* Form layout — each field group stacked vertically */
+.auth-form {
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+}
+
+/* A label + input pair */
+.form-group {
+  display:        flex;
+  flex-direction: column;
+  gap:            6px;
+}
+
+/* Two form-groups side-by-side (used for first/last name) */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap:     12px;
+}
+
+label {
+  font-size:   0.82rem;
+  font-weight: 600;
+  color:       var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Styled text inputs */
+input {
+  background:    var(--surface2);
+  border:        1px solid var(--border);
+  border-radius: 8px;
+  color:         var(--text);
+  font-family:   var(--font);
+  font-size:     0.95rem;
+  padding:       10px 12px;
+  outline:       none;
+  transition:    border-color 0.2s;
+  width:         100%;
+}
+
+input:focus {
+  border-color: var(--accent); /* neon green border on focus */
+}
+
+input::placeholder {
+  color: #444;
+}
+
+/* Red error banner shown when login/signup fails */
+.auth-error {
+  background:    rgba(255, 77, 77, 0.12);
+  border:        1px solid var(--danger);
+  border-radius: 8px;
+  color:         var(--danger);
+  font-size:     0.85rem;
+  padding:       10px 12px;
+}
+
+/* Primary action button (Log In / Create Account) */
+.auth-btn {
+  background:    var(--accent);
+  border:        none;
+  border-radius: 8px;
+  color:         #000;
+  cursor:        pointer;
+  font-family:   var(--font);
+  font-size:     0.95rem;
+  font-weight:   700;
+  margin-top:    4px;
+  padding:       12px;
+  transition:    opacity 0.2s;
+  width:         100%;
+}
+
+.auth-btn:hover {
+  opacity: 0.88;
+}
+
+.auth-btn:disabled {
+  opacity: 0.5;
+  cursor:  not-allowed;
+}
+
+/* "Don't have an account? Sign up" link below the form */
+.auth-switch {
+  color:      var(--text-dim);
+  font-size:  0.88rem;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.auth-switch a {
+  color:           var(--accent);
+  text-decoration: none;
+  font-weight:     600;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
