@@ -8,7 +8,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from users.models import User
+from accounts.models import User
 from products.models import Brand, Category, Sneaker, SneakerSize, SneakerImage
 
 print("Seeding users...")

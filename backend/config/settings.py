@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     'corsheaders',
 
     # Local apps
-    'users',
+    'accounts',
     'products',
     'orders',
 ]
@@ -84,7 +84,7 @@ DATABASES = {
 # ─── Custom User Model ────────────────────────────────────────────────────────
 # This must be set before running any migrations. Never change after first migrate.
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 # ─── Password Validation ──────────────────────────────────────────────────────
 

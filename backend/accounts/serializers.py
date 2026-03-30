@@ -14,13 +14,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         required=True,
         validators=[validate_password]
     )
-    password2 = serializers.CharField(write_only=True, required=True)
+
 
     class Meta:
         model = User
         fields = [
             'id', 'email', 'username', 'first_name', 'last_name',
-            'password', 'password2', 'tax_id', 'home_address', 'role'
+            'password', 'tax_id', 'home_address', 'role'
         ]
         extra_kwargs = {
             'first_name': {'required': True},
@@ -29,12 +29,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({'password': 'Passwords do not match.'})
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password2')
         password = validated_data.pop('password')
 
         # Force role to customer on self-registration
