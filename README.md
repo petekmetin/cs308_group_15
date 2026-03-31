@@ -1,186 +1,193 @@
-# CS308 Sneaker Store — Backend
+# SoleVault — Sneaker E-Commerce Platform
 
-Django REST API + PostgreSQL + JWT Auth
+SoleVault is a sneaker e-commerce web application built as a university Software Engineering (CS308) group project. It features a Django REST API backend and a React frontend with JWT-based authentication.
 
 ---
 
-## First Time Setup
+## Project Structure
+
+```
+cs308_group_15/
+├── backend/                        # Django project
+│   ├── manage.py                   # Django CLI entry point (run commands here)
+│   ├── .env                        # Your local environment variables (not committed)
+│   ├── .env.example                # Template — copy this to .env and fill in values
+│   ├── requirements.txt            # Python dependencies
+│   ├── config/                     # Django project settings package
+│   │   ├── settings.py             # All Django configuration (DB, JWT, CORS, etc.)
+│   │   ├── urls.py                 # Root URL router — delegates to app-level urls.py
+│   │   └── wsgi.py                 # WSGI entry point (used by production servers)
+│   └── accounts/                   # Django app handling user authentication
+│       ├── models.py               # Custom User model — DO NOT MODIFY
+│       ├── serializers.py          # JSON validation and conversion for User data
+│       ├── views.py                # API view functions (register, login, logout, me)
+│       ├── urls.py                 # URL routes for /api/auth/* endpoints
+│       └── migrations/             # Database migration files — DO NOT MODIFY
+│           └── 0001_initial.py     # Creates the users table in PostgreSQL
+└── frontend/                       # React + Vite application
+    ├── index.html                  # HTML entry point — contains <div id="root">
+    ├── vite.config.ts              # Vite build tool configuration
+    ├── package.json                # Node.js dependencies and scripts
+    └── src/
+        ├── main.jsx                # React entry point — mounts <App /> into the DOM
+        ├── App.jsx                 # Root component — defines page routing
+        ├── api.js                  # Axios HTTP client configured with base URL + JWT
+        ├── index.css               # Global dark-theme styles
+        ├── pages/
+        │   ├── LoginPage.jsx       # Login form — POST /api/auth/login/
+        │   ├── SignupPage.jsx      # Registration form — POST /api/auth/register/
+        │   └── HomePage.jsx        # Protected home page with sneaker grid
+        └── components/
+            ├── Navbar.jsx          # Top navigation bar with username + sign-out
+            └── SneakerCard.jsx     # Single sneaker display card (reusable component)
+```
+
+---
+
+## How to Set Up and Run
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL (running locally or via a cloud provider)
+
+---
+
+### 1. Set Up the Database
+
+Create a PostgreSQL database named `cs308_db`:
 
 ```bash
-# 1. Clone and enter
-git clone <your-repo-url>
-cd cs308-store/backend
-
-# 2. Virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install packages
-pip install -r requirements.txt
-
-# 4. Create the database (inside psql postgres)
-psql postgres
-```
-```sql
-CREATE USER project_admin WITH PASSWORD 'yourpassword123';
-CREATE DATABASE cs308_db OWNER project_admin;
-GRANT ALL PRIVILEGES ON DATABASE cs308_db TO project_admin;
+psql -U postgres
+CREATE DATABASE cs308_db;
 \q
 ```
 
+---
+
+### 2. Set Up the Backend
+
 ```bash
-# 5. Create .env file in backend/
-touch .env
+# Navigate to the backend directory
+cd backend
+
+# Create and activate a Python virtual environment
+python -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+# .venv\Scripts\activate         # Windows
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Copy the environment variables template and fill in your values
+cp .env.example .env
 ```
 
-Paste this into `.env`:
+Open `backend/.env` and set your database credentials:
 
-```env
-SECRET_KEY=your-secret-key-here
-DEBUG=True
+```
+DJANGO_SECRET_KEY=replace-this-with-a-long-random-string
+DJANGO_DEBUG=true
 DB_NAME=cs308_db
-DB_USER=project_admin
-DB_PASSWORD=yourpassword123
+DB_USER=your_postgres_username
+DB_PASSWORD=your_postgres_password
 DB_HOST=localhost
 DB_PORT=5432
-ALLOWED_HOSTS=localhost,127.0.0.1
-```
-
-Generate a secret key:
-```bash
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
 ```bash
-# 6. Run migrations
-python manage.py makemigrations users
-python manage.py makemigrations products
-python manage.py makemigrations orders
+# Run database migrations (creates the users table from migrations/)
 python manage.py migrate
 
-# 7. Create admin account
-python manage.py createsuperuser
-
-# 8. Start server
+# Start the Django development server on port 8000
 python manage.py runserver
-
-# 9. (Optional) Load test data
-python manage.py shell < seed.py
 ```
+
+The backend API is now running at `http://127.0.0.1:8000`.
 
 ---
 
-## Returning Developer (daily startup)
+### 3. Set Up the Frontend
 
 ```bash
-cd cs308-store/backend
-source venv/bin/activate
-brew services start postgresql@17   # if not already running
-python manage.py runserver
+# In a new terminal, navigate to the frontend directory
+cd frontend
+
+# Install Node.js dependencies
+npm install
+
+# Start the Vite development server on port 5173
+npm run dev
 ```
 
----
-
-## Test Accounts (after seeding)
-
-| Email | Password | Role |
-|-------|----------|------|
-| `customer@test.com` | `TestPass123!` | Customer |
-| `sales@test.com` | `TestPass123!` | Sales Manager |
-| `product@test.com` | `TestPass123!` | Product Manager |
+Open your browser at `http://localhost:5173`.
 
 ---
 
-## Key URLs
+## How Authentication Works
 
-| URL | Description |
-|-----|-------------|
-| `http://127.0.0.1:8000/admin/` | Django admin panel |
-| `http://127.0.0.1:8000/api/auth/register/` | Register |
-| `http://127.0.0.1:8000/api/auth/login/` | Login → get JWT tokens |
-| `http://127.0.0.1:8000/api/products/sneakers/` | List sneakers |
-| `http://127.0.0.1:8000/api/orders/` | Orders |
+Here is a plain-English walkthrough of the signup and login flows:
 
-> Visiting `http://127.0.0.1:8000/` returns a 404 — this is normal. All routes start with `/api/`.
+### Signup Flow
 
----
+1. The user fills in the form on `/signup` (name, username, email, password).
+2. React sends a `POST /api/auth/register/` request to Django with the form data as JSON.
+3. Django's `UserRegistrationSerializer` validates the data:
+   - Is the email already in the database?
+   - Does the password meet minimum requirements (length, not too common, etc.)?
+4. If valid, Django creates a new row in the `users` table with the **hashed** password (plain-text is never stored).
+5. Django generates two JWT tokens:
+   - **access token** — valid for 60 minutes, sent with every future API request.
+   - **refresh token** — valid for 7 days, used to get a new access token when the old one expires.
+6. Both tokens are returned in the response. React stores them in `localStorage`.
+7. React redirects the user to the home page. They are now logged in.
 
-## API Overview
+### Login Flow
 
-### Auth
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| POST | `/api/auth/register/` | — | Register new customer |
-| POST | `/api/auth/login/` | — | Login, returns JWT tokens |
-| POST | `/api/auth/logout/` | ✅ | Invalidate refresh token |
-| GET/PATCH | `/api/auth/me/` | ✅ | View / edit own profile |
-| POST | `/api/auth/token/refresh/` | — | Get new access token |
+1. The user fills in email + password on `/login`.
+2. React sends `POST /api/auth/login/` to Django.
+3. Django calls `authenticate(email, password)` — it hashes the provided password and compares it to the stored hash.
+4. If they match, Django generates new tokens and returns them.
+5. React stores the tokens and redirects to the home page.
 
-### Products
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| GET | `/api/products/sneakers/` | — | List sneakers (filterable) |
-| GET | `/api/products/sneakers/{id}/` | — | Sneaker detail |
-| POST | `/api/products/sneakers/create/` | Product Mgr | Add sneaker |
-| PATCH | `/api/products/sneakers/{id}/set-price/` | Sales Mgr | Set price & discount |
-| GET | `/api/products/sneakers/{id}/reviews/` | — | Approved reviews |
-| POST | `/api/products/sneakers/{id}/reviews/create/` | Customer | Submit review |
-| PATCH | `/api/products/reviews/{id}/moderate/` | Product Mgr | Approve / reject review |
-| GET/POST | `/api/products/wishlist/` | Customer | View / add wishlist |
-| DELETE | `/api/products/wishlist/{id}/` | Customer | Remove from wishlist |
+### Protected Pages
 
-### Orders
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| GET | `/api/orders/` | ✅ | My orders (customers) / all orders (managers) |
-| POST | `/api/orders/create/` | Customer | Place order |
-| POST | `/api/orders/{id}/cancel/` | Customer | Cancel order |
-| POST | `/api/orders/{id}/refund/` | Customer | Request refund (within 30 days) |
-| POST | `/api/orders/{id}/approve-refund/` | Sales Mgr | Approve refund |
-| GET | `/api/orders/invoices/` | Sales Mgr | List invoices |
-| GET | `/api/orders/deliveries/` | Product Mgr | Pending deliveries |
-| PATCH | `/api/orders/deliveries/{id}/` | Product Mgr | Update delivery status |
+- Any page wrapped in `<PrivateRoute>` (see `App.jsx`) checks for an access token in `localStorage`.
+- If no token is found, the user is immediately redirected to `/login`.
+- Every API call in `api.js` automatically includes the token as an `Authorization: Bearer <token>` header so Django knows who is making the request.
+
+### Logout Flow
+
+1. The user clicks "Sign Out" in the navbar.
+2. React sends `POST /api/auth/logout/` with the refresh token.
+3. Django **blacklists** the refresh token — it is permanently invalidated in the database.
+4. React clears `localStorage` and redirects to `/login`.
 
 ---
 
-## Authentication
+## Database Note
 
-All protected requests require this header:
+This project uses **PostgreSQL** as its database. The database connection is configured in `backend/config/settings.py` via environment variables in `backend/.env`.
 
-```
-Authorization: Bearer <access_token>
-```
+**Important:** Do not modify any of the following:
+- `backend/config/settings.py` — specifically the `DATABASES` block
+- `backend/accounts/models.py` — the `User` model and its fields
+- `backend/accounts/migrations/` — the migration files that define the database schema
 
-- Access token expires in **60 minutes**
-- Refresh token lasts **7 days**
-- Use `POST /api/auth/token/refresh/` with `{ "refresh": "..." }` to get a new access token
-
----
-
-## Roles
-
-| Role | What they can do |
-|------|-----------------|
-| **Customer** | Browse, order, wishlist, review, cancel, refund |
-| **Sales Manager** | Set prices, manage invoices, approve refunds |
-| **Product Manager** | Add/edit products, manage stock, deliveries, approve reviews |
-
-Roles are assigned in the Django admin panel. Self-registration always creates a Customer.
+The `users` table is already defined and stable. Changes to models or migrations can corrupt existing data or break the migration history.
 
 ---
 
-## Common Errors
+## API Endpoints
 
-| Error | Fix |
-|-------|-----|
-| `source: no such file venv/bin/activate` | Run `python3 -m venv venv` first |
-| `ModuleNotFoundError` | venv not active — run `source venv/bin/activate` |
-| `could not connect to server` | `brew services start postgresql@17` |
-| `password authentication failed` | Check `DB_PASSWORD` in `.env` matches your psql password |
-| `relation does not exist` | Run `python manage.py migrate` |
-| `401 Unauthorized` | Token expired — call `/api/auth/token/refresh/` |
-| `403 Forbidden` | Wrong role for this endpoint |
-
----
-
-For full documentation including database schema, serializers, views, and permissions see `cs308_backend_documentation.md`.
+| Method | URL | Auth Required | Description |
+|--------|-----|---------------|-------------|
+| POST | `/api/auth/register/` | No | Create a new account |
+| POST | `/api/auth/login/` | No | Log in, get tokens |
+| POST | `/api/auth/logout/` | Yes | Blacklist refresh token |
+| GET | `/api/auth/me/` | Yes | Get current user profile |
+| PATCH | `/api/auth/me/` | Yes | Update profile fields |
+| POST | `/api/auth/change-password/` | Yes | Change password |
+| POST | `/api/auth/token/refresh/` | No | Get new access token using refresh token |

@@ -15,7 +15,6 @@ function SneakerCard({ sneaker }) {
     price,
     discounted_price,
     discount_percentage,
-    description,
     primary_image,
     is_in_stock,
     colorway,
@@ -44,7 +43,6 @@ function SneakerCard({ sneaker }) {
         <span className="sneaker-brand">{brand_name}</span>
         <h3 className="sneaker-name">{name}</h3>
         {colorway && <p className="sneaker-colorway">{colorway}</p>}
-        {description && <p className="sneaker-description">{description}</p>}
 
         <div className="sneaker-footer">
           <div className="sneaker-price-wrap">
