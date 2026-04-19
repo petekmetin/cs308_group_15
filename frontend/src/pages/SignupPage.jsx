@@ -19,8 +19,9 @@
 // ============================================================
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import api from "../api";
+import { syncPendingCartItem } from "../utils/cart";
 
 function SignupPage() {
   // ── State Variables ────────────────────────────────────────
@@ -40,6 +41,9 @@ function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const authMessage = location.state?.message || "";
+  const redirectTo = location.state?.redirectTo || "/home";
 
   // ── handleSubmit ───────────────────────────────────────────
   // Called when the user submits the registration form.
@@ -77,8 +81,13 @@ function SignupPage() {
       localStorage.setItem("refresh_token", refresh);
       localStorage.setItem("user", JSON.stringify(user));
 
+      // Notify App.jsx that the auth token changed so it loads this user's cart.
+      window.dispatchEvent(new Event("auth-changed"));
+
+      const addedPendingItem = await syncPendingCartItem();
+
       // Auto-login: redirect straight to the home page
-      navigate("/");
+      navigate(addedPendingItem ? "/cart" : redirectTo, { replace: true });
     } catch (err) {
       // Django's DRF returns field-level errors as an object, e.g.:
       // { "email": ["user with this email already exists."] }
@@ -104,10 +113,14 @@ function SignupPage() {
     <div className="auth-page">
       <div className="auth-card">
 
-        <div className="auth-logo">SOLE<span>VAULT</span></div>
+        <Link to="/" className="auth-logo">
+          SOLE<span>VAULT</span>
+        </Link>
 
         <h1 className="auth-title">Create account</h1>
         <p className="auth-subtitle">Join SoleVault today</p>
+
+        {authMessage && <div className="auth-notice">{authMessage}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
 
@@ -202,7 +215,7 @@ function SignupPage() {
 
         <p className="auth-switch">
           Already have an account?{" "}
-          <Link to="/login">Log in</Link>
+          <Link to="/login" state={location.state}>Log in</Link>
         </p>
       </div>
     </div>

@@ -17,7 +17,7 @@
 // ============================================================
 
 // useNavigate: lets us redirect the user after logging out
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // api: our axios instance — used to call POST /api/auth/logout/
 import api from "../api";
@@ -28,7 +28,7 @@ import api from "../api";
 // Props destructuring: instead of writing props.user, we write
 // { user } in the function signature to pull it out directly.
 // ============================================================
-function Navbar({ user }) {
+function Navbar({ user, cartCount = 0 }) {
   const navigate = useNavigate();
 
   // ── handleLogout ───────────────────────────────────────────
@@ -57,6 +57,10 @@ function Navbar({ user }) {
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user");
 
+      // Notify App.jsx that the token is gone so it clears the cart state.
+      // App is outside BrowserRouter and won't re-render on navigation alone.
+      window.dispatchEvent(new Event("auth-changed"));
+
       // Redirect to login — PrivateRoute will block the home page now
       navigate("/login");
     }
@@ -66,12 +70,17 @@ function Navbar({ user }) {
   return (
     <nav className="navbar">
       {/* Brand / Logo — clicking it does nothing here but could navigate home */}
-      <div className="nav-brand">
+      <Link to="/home" className="nav-brand">
         SOLE<span className="nav-brand-accent">VAULT</span>
-      </div>
+      </Link>
 
       {/* Right side: username display + sign-out button */}
       <div className="nav-right">
+        <Link to="/cart" className="nav-cart-link">
+          Cart
+          {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
+        </Link>
+
         {/*
           Optional chaining (user?.username): safely accesses .username
           even when user is null (while the API call is in progress).

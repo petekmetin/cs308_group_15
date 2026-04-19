@@ -27,10 +27,11 @@
 // useNavigate: a react-router-dom hook that gives us a function to
 //   programmatically change the current URL (navigate to another page).
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 
 // Our pre-configured axios instance that calls http://127.0.0.1:8000
 import api from "../api";
+import { syncPendingCartItem } from "../utils/cart";
 
 // ============================================================
 // LoginPage Component
@@ -53,8 +54,11 @@ function LoginPage() {
   // (used to disable the button so the user can't submit twice)
   const [loading, setLoading] = useState(false);
 
-  // navigate is a function: calling navigate("/") redirects the browser to "/"
+  // navigate is a function: calling navigate("/home") redirects the browser to the protected app
   const navigate = useNavigate();
+  const location = useLocation();
+  const authMessage = location.state?.message || "";
+  const redirectTo = location.state?.redirectTo || "/home";
 
   // ── handleSubmit ───────────────────────────────────────────
   // This function runs when the user submits the login form.
@@ -91,9 +95,16 @@ function LoginPage() {
       // JSON.stringify converts the object to a string for storage
       localStorage.setItem("user", JSON.stringify(user));
 
+      // Notify App.jsx that the auth token changed so it re-fetches the
+      // correct cart for this user. App is outside BrowserRouter and won't
+      // re-render on navigation, so we use a custom window event.
+      window.dispatchEvent(new Event("auth-changed"));
+
+      const addedPendingItem = await syncPendingCartItem();
+
       // Redirect to the Home page — PrivateRoute in App.jsx will now
       // see the token and allow access
-      navigate("/");
+      navigate(addedPendingItem ? "/cart" : redirectTo, { replace: true });
     } catch (err) {
       // If Django returned a 4xx/5xx status, axios throws an error.
       // We extract the error detail from the response body.
@@ -117,10 +128,14 @@ function LoginPage() {
       <div className="auth-card">
 
         {/* Site logo / brand name */}
-        <div className="auth-logo">SOLE<span>VAULT</span></div>
+        <Link to="/" className="auth-logo">
+          SOLE<span>VAULT</span>
+        </Link>
 
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-subtitle">Sign in to your account</p>
+
+        {authMessage && <div className="auth-notice">{authMessage}</div>}
 
         {/*
           onSubmit calls our handleSubmit function when the form is submitted
@@ -180,7 +195,7 @@ function LoginPage() {
         <p className="auth-switch">
           Don't have an account?{" "}
           {/* <Link> is react-router's anchor tag — it changes the URL without a full page reload */}
-          <Link to="/signup">Sign up</Link>
+          <Link to="/signup" state={location.state}>Sign up</Link>
         </p>
       </div>
     </div>

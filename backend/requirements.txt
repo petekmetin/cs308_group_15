@@ -1,11 +1,6 @@
-asgiref==3.11.1
-Django==6.0.3
-django-cors-headers==4.9.0
-djangorestframework==3.17.0
-djangorestframework_simplejwt==5.5.1
-pillow==12.1.1
-psycopg==3.3.3
-psycopg-binary==3.3.3
-PyJWT==2.12.1
-python-dotenv==1.2.2
-sqlparse==0.5.5
+django
+djangorestframework
+django-cors-headers
+djangorestframework-simplejwt
+python-dotenv
+psycopg2-binary
