@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SoleVault — Sneaker Store</title>
+
+    <!--
+      Google Fonts: We load two fonts used throughout the app.
+      - "Outfit"     → clean, modern sans-serif for body text
+      - "Space Mono" → monospace font for prices and the logo
+    -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!--
+      This single <div id="root"> is where React "mounts" the entire app.
+      React replaces the contents of this div with all the components it renders.
+      You will never put HTML here directly — React handles everything.
+    -->
+    <div id="root"></div>
+
+    <!--
+      Vite (our build tool) looks for this script tag to know where the
+      JavaScript entry point lives. /src/main.jsx is the first file that runs.
+      type="module" tells the browser this is an ES Module (modern JS).
+    -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

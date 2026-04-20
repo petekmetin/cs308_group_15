@@ -1,0 +1,1178 @@
+/* ============================================================
+   index.css — Global Styles for SoleVault
+   ============================================================
+   This file styles the entire app. It is imported once in
+   main.jsx and applies to all components.
+
+   Design system:
+   - Dark background (#0a0a0a) — easy on the eyes
+   - Neon green accent (#c8ff00) — SoleVault brand colour
+   - White text (#f5f5f5) — high contrast on dark background
+   - Two fonts:
+       "Outfit"     → body text (clean and modern)
+       "Space Mono" → prices, logo (monospace = technical look)
+
+   CSS custom properties (variables):
+   We define colours and values as variables (--name: value) so
+   we can change the whole theme by editing just this block.
+   ============================================================ */
+
+/* ── Reset & Root Variables ──────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* padding/border are included in element size */
+}
+
+:root {
+  --bg:          #0a0a0a;  /* page background */
+  --surface:     #141414;  /* card backgrounds */
+  --surface2:    #1e1e1e;  /* slightly lighter surfaces */
+  --border:      #2a2a2a;  /* subtle borders */
+  --text:        #f5f5f5;  /* primary text */
+  --text-dim:    #888888;  /* secondary / muted text */
+  --accent:      #c8ff00;  /* SoleVault neon green */
+  --danger:      #ff4d4d;  /* error states */
+  --radius:      10px;     /* default border-radius */
+  --font:        'Outfit', sans-serif;
+  --mono:        'Space Mono', monospace;
+}
+
+body {
+  background-color: var(--bg);
+  color:            var(--text);
+  font-family:      var(--font);
+  min-height:       100vh;
+  -webkit-font-smoothing: antialiased; /* smoother fonts on Mac */
+}
+
+/* ── Page wrapper ────────────────────────────────────────── */
+/* Used by HomePage — fills the screen, flex column layout */
+.page {
+  display:        flex;
+  flex-direction: column;
+  min-height:     100vh;
+}
+
+.landing-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(200, 255, 0, 0.08), transparent 22%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 20%),
+    var(--bg);
+}
+
+.landing-nav {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 22px 32px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.landing-brand,
+.nav-brand {
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.landing-brand span {
+  color: var(--accent);
+}
+
+.landing-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-link {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.landing-cta {
+  text-decoration: none;
+  background: var(--accent);
+  color: #000;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.landing-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 32px 48px;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 48px;
+}
+
+.landing-copy,
+.shoe-slider {
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: rgba(20, 20, 20, 0.86);
+}
+
+.landing-copy {
+  padding: 40px;
+}
+
+.landing-kicker {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.landing-title {
+  font-size: clamp(2.1rem, 5vw, 4.5rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  margin-bottom: 18px;
+  max-width: 10.5ch;
+}
+
+.landing-subtitle {
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 58ch;
+}
+
+.landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.landing-primary-btn,
+.landing-secondary-btn {
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 700;
+}
+
+.landing-primary-btn {
+  background: var(--accent);
+  color: #000;
+}
+
+.landing-secondary-btn {
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.landing-showcase {
+  padding-bottom: 24px;
+}
+
+/* ── Navbar ──────────────────────────────────────────────── */
+/*
+  The navbar is "fixed" so it stays at the top while scrolling.
+  z-index: 100 keeps it on top of all other content.
+*/
+.navbar {
+  position:        fixed;
+  top:             0;
+  left:            0;
+  right:           0;
+  z-index:         100;
+  height:          64px;
+  background:      rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(16px);              /* frosted glass effect */
+  border-bottom:   1px solid var(--border);
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         0 32px;
+}
+
+/* Brand/logo text in the navbar */
+/* The accent part of the logo: SOLE[VAULT] */
+.nav-brand-accent {
+  color: var(--accent);
+}
+
+/* Right side of navbar: username + sign-out */
+.nav-right {
+  display:     flex;
+  align-items: center;
+  gap:         16px;
+}
+
+.nav-cart-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.85rem;
+}
+
+.nav-cart-count {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Displayed username text */
+.nav-username {
+  font-size:  0.9rem;
+  color:      var(--text-dim);
+}
+
+/* Sign out button */
+.nav-logout-btn {
+  background:    transparent;
+  border:        1px solid var(--border);
+  color:         var(--text);
+  padding:       6px 14px;
+  border-radius: var(--radius);
+  font-family:   var(--font);
+  font-size:     0.85rem;
+  cursor:        pointer;
+  transition:    border-color 0.2s, color 0.2s;
+}
+
+.nav-logout-btn:hover {
+  border-color: var(--accent);
+  color:        var(--accent);
+}
+
+/* ── Home Page Content ───────────────────────────────────── */
+/*
+  padding-top: 80px pushes content below the fixed 64px navbar.
+  Without this, the navbar would cover the top of the content.
+*/
+.home-content {
+  padding:    80px 32px 48px;
+  max-width:  1200px;
+  margin:     0 auto; /* center horizontally */
+  width:      100%;
+}
+
+/* ── Welcome Banner ──────────────────────────────────────── */
+.welcome-banner {
+  margin-bottom: 48px;
+  padding:       40px;
+  background:
+    radial-gradient(circle at top right, rgba(200, 255, 0, 0.16), transparent 30%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  display:       grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 0.95fr);
+  gap:           24px;
+  align-items:   end;
+}
+
+.welcome-copy {
+  max-width: 640px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.welcome-art {
+  position: relative;
+  min-height: 320px;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 30% 35%, rgba(200, 255, 0, 0.18), transparent 22%),
+    radial-gradient(circle at 72% 28%, rgba(255, 255, 255, 0.08), transparent 18%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.welcome-orbit {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.welcome-orbit-large {
+  width: 340px;
+  height: 340px;
+  left: -40px;
+  top: 28px;
+}
+
+.welcome-orbit-small {
+  width: 150px;
+  height: 150px;
+  right: 56px;
+  top: 46px;
+  border-color: rgba(200, 255, 0, 0.24);
+}
+
+.welcome-grid-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 82%);
+}
+
+.welcome-wordmark {
+  position: absolute;
+  left: 42px;
+  bottom: 54px;
+  font-family: var(--mono);
+  font-size: clamp(2.4rem, 7vw, 5rem);
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.08);
+}
+
+.welcome-stat-pill {
+  position: absolute;
+  right: 26px;
+  bottom: 28px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 255, 0, 0.2);
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.welcome-kicker {
+  color:          var(--accent);
+  font-size:      0.8rem;
+  font-weight:    700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom:  10px;
+}
+
+.welcome-title {
+  font-size:     2rem;
+  font-weight:   800;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+/* The ", username" part rendered in accent colour */
+.welcome-username {
+  color: var(--accent);
+}
+
+.welcome-subtitle {
+  color:     var(--text-dim);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 58ch;
+}
+
+.shoe-slider {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.shoe-slider-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.shoe-slider-kicker {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.shoe-slider-title {
+  font-size: 1.4rem;
+  line-height: 1.05;
+}
+
+.shoe-slider-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.shoe-slider-arrow {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.shoe-slider-stage {
+  position: relative;
+  height: 420px;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(200, 255, 0, 0.18), transparent 34%),
+    linear-gradient(160deg, #262626 0%, #181818 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.shoe-slider-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  padding: 18px;
+  background: #f4f4f1;
+}
+
+.shoe-slider-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.shoe-slider-fallback span {
+  font-family: var(--mono);
+  font-size: clamp(3rem, 6vw, 4.8rem);
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: 0.08em;
+}
+
+.shoe-slider-badge {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--accent);
+  border: 1px solid rgba(200, 255, 0, 0.28);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shoe-slider-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+.shoe-slider-brand {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.shoe-slider-description {
+  color: var(--text-dim);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.shoe-slider-price {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 1.15rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.shoe-slider-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.shoe-slider-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  padding: 0;
+}
+
+.shoe-slider-dot.is-active {
+  width: 28px;
+  background: var(--accent);
+}
+
+/* ── Sneaker Section ─────────────────────────────────────── */
+.sneaker-section {
+  /* nothing extra needed — grid handles layout */
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.section-kicker {
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size:     1.3rem;
+  font-weight:   700;
+  letter-spacing: -0.3px;
+}
+
+.section-note {
+  max-width: 360px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.section-note code {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+/*
+  CSS Grid: automatically creates columns that are at least 260px wide.
+  "auto-fill" + "minmax" means: fill the row with as many columns as fit,
+  each at least 260px, stretching to fill the rest (1fr).
+  This is fully responsive without any media queries.
+*/
+.sneaker-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap:                   20px;
+}
+
+.cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.7fr);
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 32px;
+}
+
+.cart-copy,
+.cart-summary-card,
+.cart-empty,
+.cart-item-card {
+  border: 1px solid var(--border);
+  background: rgba(20, 20, 20, 0.86);
+  border-radius: 24px;
+}
+
+.cart-copy,
+.cart-summary-card,
+.cart-empty {
+  padding: 24px;
+}
+
+.cart-summary-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.cart-summary-label {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.cart-summary-value,
+.cart-summary-total {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.cart-back-link {
+  margin-top: 10px;
+  justify-self: start;
+}
+
+.cart-items {
+  display: grid;
+  gap: 16px;
+}
+
+.cart-item-card {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.cart-item-media {
+  width: 180px;
+  height: 180px;
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(200, 255, 0, 0.18), transparent 34%),
+    linear-gradient(160deg, #262626 0%, #181818 100%);
+}
+
+.cart-item-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  padding: 12px;
+  background: #f4f4f1;
+}
+
+.cart-item-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.cart-item-fallback span {
+  font-family: var(--mono);
+  font-size: 2.5rem;
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.cart-item-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.cart-qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cart-qty-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.cart-qty-value {
+  min-width: 18px;
+  text-align: center;
+  font-family: var(--mono);
+}
+
+.cart-item-total {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.cart-remove-btn {
+  border: 1px solid rgba(255, 77, 77, 0.4);
+  background: rgba(255, 77, 77, 0.08);
+  color: #ff8484;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+/* ── Sneaker Card ────────────────────────────────────────── */
+.sneaker-card {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: 18px;
+  overflow:      hidden;
+  transition:    border-color 0.2s, transform 0.2s;
+  display:       flex;
+  flex-direction: column;
+}
+
+.sneaker-card:hover {
+  border-color: var(--accent);
+  transform:    translateY(-2px); /* subtle lift on hover */
+}
+
+.sneaker-media {
+  position: relative;
+  height: 280px;
+  background:
+    radial-gradient(circle at top right, rgba(200, 255, 0, 0.18), transparent 34%),
+    linear-gradient(160deg, #262626 0%, #181818 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.sneaker-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  padding: 18px;
+  background: #f4f4f1;
+}
+
+.sneaker-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.sneaker-fallback span {
+  font-family: var(--mono);
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: 0.08em;
+}
+
+.sneaker-accent-badge {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--accent);
+  border: 1px solid rgba(200, 255, 0, 0.28);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sneaker-info {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1; /* fill remaining height so all cards are equal height */
+}
+
+/* Brand name — small caps in accent colour */
+.sneaker-brand {
+  font-size:      0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color:          var(--accent);
+  font-weight:    600;
+}
+
+.sneaker-name {
+  font-size:   1.08rem;
+  font-weight: 700;
+}
+
+.sneaker-description {
+  font-size:   0.85rem;
+  color:       var(--text-dim);
+  line-height: 1.4;
+  flex:        1; /* pushes footer to the bottom */
+}
+
+/* Footer row: price left, button right */
+.sneaker-footer {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  margin-top:      12px;
+}
+
+/* Price in monospace font — aligns digits nicely */
+.sneaker-price {
+  font-family: var(--mono);
+  font-size:   1.1rem;
+  font-weight: 700;
+  color:       var(--accent);
+}
+
+/* "Add to Cart" button on each card */
+.sneaker-btn {
+  background:    var(--accent);
+  color:         #000;
+  border:        none;
+  padding:       7px 14px;
+  border-radius: 6px;
+  font-family:   var(--font);
+  font-size:     0.82rem;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    opacity 0.2s;
+}
+
+.sneaker-btn:hover {
+  opacity: 0.85;
+}
+
+/* ── Auth Pages (Login & Signup) ─────────────────────────── */
+/*
+  Full-screen centred layout for the login and signup pages.
+  The card floats in the middle of the dark background.
+*/
+.auth-page {
+  min-height:      100vh;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         24px;
+  background:      var(--bg);
+}
+
+/* The white-bordered box containing the form */
+.auth-card {
+  width:         100%;
+  max-width:     420px;
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  padding:       40px 36px;
+}
+
+/* Logo at top of auth forms */
+.auth-logo {
+  display:         block;
+  font-family:    var(--mono);
+  font-size:      1.3rem;
+  font-weight:    700;
+  letter-spacing: 2px;
+  margin-bottom:  28px;
+  text-align:     center;
+  text-decoration: none;
+  color:          var(--text);
+}
+
+/* The [VAULT] part of the logo */
+.auth-logo span {
+  color: var(--accent);
+}
+
+.auth-logo:hover {
+  opacity: 0.92;
+}
+
+.auth-title {
+  font-size:     1.6rem;
+  font-weight:   800;
+  margin-bottom: 6px;
+}
+
+.auth-subtitle {
+  color:         var(--text-dim);
+  font-size:     0.9rem;
+  margin-bottom: 28px;
+}
+
+/* Form layout — each field group stacked vertically */
+.auth-form {
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+}
+
+/* A label + input pair */
+.form-group {
+  display:        flex;
+  flex-direction: column;
+  gap:            6px;
+}
+
+/* Two form-groups side-by-side (used for first/last name) */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap:     12px;
+}
+
+label {
+  font-size:   0.82rem;
+  font-weight: 600;
+  color:       var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Styled text inputs */
+input {
+  background:    var(--surface2);
+  border:        1px solid var(--border);
+  border-radius: 8px;
+  color:         var(--text);
+  font-family:   var(--font);
+  font-size:     0.95rem;
+  padding:       10px 12px;
+  outline:       none;
+  transition:    border-color 0.2s;
+  width:         100%;
+}
+
+input:focus {
+  border-color: var(--accent); /* neon green border on focus */
+}
+
+input::placeholder {
+  color: #444;
+}
+
+/* Red error banner shown when login/signup fails */
+.auth-error {
+  background:    rgba(255, 77, 77, 0.12);
+  border:        1px solid var(--danger);
+  border-radius: 8px;
+  color:         var(--danger);
+  font-size:     0.85rem;
+  padding:       10px 12px;
+}
+
+.auth-notice {
+  background: rgba(200, 255, 0, 0.08);
+  border: 1px solid rgba(200, 255, 0, 0.3);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+
+/* Primary action button (Log In / Create Account) */
+.auth-btn {
+  background:    var(--accent);
+  border:        none;
+  border-radius: 8px;
+  color:         #000;
+  cursor:        pointer;
+  font-family:   var(--font);
+  font-size:     0.95rem;
+  font-weight:   700;
+  margin-top:    4px;
+  padding:       12px;
+  transition:    opacity 0.2s;
+  width:         100%;
+}
+
+.auth-btn:hover {
+  opacity: 0.88;
+}
+
+.auth-btn:disabled {
+  opacity: 0.5;
+  cursor:  not-allowed;
+}
+
+/* "Don't have an account? Sign up" link below the form */
+.auth-switch {
+  color:      var(--text-dim);
+  font-size:  0.88rem;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.auth-switch a {
+  color:           var(--accent);
+  text-decoration: none;
+  font-weight:     600;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .landing-nav,
+  .landing-main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .landing-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .section-note {
+    max-width: none;
+  }
+
+  .welcome-art {
+    min-height: 240px;
+  }
+
+  .shoe-slider-stage {
+    height: 360px;
+  }
+
+  .cart-layout,
+  .cart-item-card {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-item-actions {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-nav {
+    padding-top: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .landing-nav-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .landing-copy {
+    padding: 24px;
+  }
+
+  .landing-title {
+    max-width: none;
+    font-size: 2.5rem;
+  }
+
+  .landing-actions {
+    flex-direction: column;
+  }
+
+  .shoe-slider {
+    padding: 16px;
+  }
+
+  .shoe-slider-stage {
+    height: 300px;
+  }
+
+  .shoe-slider-top,
+  .shoe-slider-meta {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .sneaker-media {
+    height: 240px;
+  }
+
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .nav-right {
+    gap: 10px;
+  }
+
+  .nav-username {
+    display: none;
+  }
+
+  .nav-cart-link {
+    padding: 7px 10px;
+  }
+
+  .home-content {
+    padding: 80px 16px 32px;
+  }
+
+  .welcome-banner {
+    padding: 24px;
+  }
+
+  .welcome-title {
+    font-size: 1.65rem;
+  }
+
+  .welcome-art {
+    min-height: 180px;
+  }
+
+  .welcome-wordmark {
+    left: 20px;
+    bottom: 22px;
+    font-size: 2.1rem;
+  }
+
+  .welcome-stat-pill {
+    right: 18px;
+    bottom: 18px;
+    font-size: 0.66rem;
+    padding: 8px 10px;
+  }
+
+  .auth-card {
+    padding: 32px 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
