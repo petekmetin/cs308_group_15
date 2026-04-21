@@ -11,7 +11,6 @@ backend/venv/
 backend/.env
 backend/db.sqlite3
 backend/staticfiles/
-backend/media/
 
 # ── Node / React ───────────────────────────────────────
 frontend/node_modules/
@@ -30,4 +29,4 @@ frontend/.vite/
 *.swp
 
 # ── Migrations are COMMITTED — do not add them here ───
-# backend/**/migrations/   ← leave this commented
+# backend/**/migrations/   ← leave this commented.claude/

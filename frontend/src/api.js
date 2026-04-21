@@ -49,11 +49,21 @@ const api = axios.create({
 // JWT (JSON Web Token) is a string that proves "this user is logged in."
 // Django checks this header on every protected endpoint.
 // The format Django expects is: "Bearer <the_token_string>"
+// Endpoints that should never receive an Authorization header.
+// These are public and SimpleJWT will reject the whole request if it
+// sees an expired/invalid token — even when the view is AllowAny.
+const PUBLIC_ENDPOINT_PREFIXES = [
+  "/api/auth/login/",
+  "/api/auth/register/",
+  "/api/products/",
+];
+
 api.interceptors.request.use((config) => {
   // Retrieve the token we saved to localStorage during login
   const token = localStorage.getItem("access_token");
+  const isPublic = PUBLIC_ENDPOINT_PREFIXES.some((url) => config.url?.startsWith(url));
 
-  if (token) {
+  if (token && !isPublic) {
     // Attach the token as a Bearer token in the Authorization header.
     // Every request made through this api instance will include this header.
     config.headers.Authorization = `Bearer ${token}`;

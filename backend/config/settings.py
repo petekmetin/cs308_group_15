@@ -7,11 +7,11 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key')
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key")
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 # ─── Applications ─────────────────────────────────────────────────────────────
 
@@ -31,14 +31,14 @@ INSTALLED_APPS = [
 
     # Local apps
     'accounts',
+    'cart',
     'products',
-    'orders',
 ]
 
 # ─── Middleware ────────────────────────────────────────────────────────────────
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',       # must be first
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -82,7 +82,6 @@ DATABASES = {
 }
 
 # ─── Custom User Model ────────────────────────────────────────────────────────
-# This must be set before running any migrations. Never change after first migrate.
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -138,11 +137,9 @@ SIMPLE_JWT = {
 }
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-# In development allow the React dev server. Tighten this in production.
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',    # Vite
-    'http://localhost:3000',    # CRA fallback
-]
+CORS_ALLOWED_ORIGINS = os.getenv(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000"
+).split(",")
 
 CORS_ALLOW_CREDENTIALS = True

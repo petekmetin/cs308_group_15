@@ -12,6 +12,7 @@ urlpatterns = [
 
     # Sneakers
     path('sneakers/', views.SneakerListView.as_view(), name='sneaker-list'),
+    path('sizes/options/', views.SneakerSizeOptionsView.as_view(), name='sneaker-size-options'),
     path('sneakers/create/', views.SneakerCreateView.as_view(), name='sneaker-create'),
     path('sneakers/<int:pk>/', views.SneakerDetailView.as_view(), name='sneaker-detail'),
     path('sneakers/<int:pk>/set-price/', views.set_sneaker_price, name='sneaker-set-price'),

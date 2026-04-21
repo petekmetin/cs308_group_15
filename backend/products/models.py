@@ -195,7 +195,7 @@ class SneakerImage(models.Model):
         on_delete=models.CASCADE,
         related_name='images'
     )
-    image_url = models.URLField()
+    image = models.ImageField(upload_to='products/sneakers/', max_length=500)
     alt_text = models.CharField(max_length=255, blank=True)
     is_primary = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)

@@ -1,64 +1,72 @@
 // ============================================================
 // src/components/SneakerCard.jsx — Single Sneaker Card
 // ============================================================
-// Props from the API (SneakerListSerializer):
-//   id, name, colorway, brand_name, category_name, sku,
-//   price, discounted_price, discount_percentage,
-//   is_in_stock, total_stock, is_featured, primary_image,
-//   popularity_score, created_at
+// A simple presentational component that displays one sneaker.
+//
+// "Presentational component" means it only handles display —
+// no API calls, no state, just receives data (props) and renders it.
+// This is a common pattern called "dumb components" — they are
+// easy to test and easy to reuse anywhere in the app.
+//
+// Props it receives:
+//   - sneaker: an object with { name, brand, price, description, accent, image }
+//
+// When a real products API is added, the same component will work
+// with live data — just pass the API data as the sneaker prop.
 // ============================================================
 
-function SneakerCard({ sneaker }) {
-  const {
-    name,
-    brand_name,
-    price,
-    discounted_price,
-    discount_percentage,
-    primary_image,
-    is_in_stock,
-    colorway,
-  } = sneaker;
-
-  const hasDiscount = discount_percentage > 0;
+// ============================================================
+// SneakerCard Component
+// ============================================================
+function SneakerCard({ sneaker, onAddToCart, disabled = false }) {
+  const { name, brand, price, description, accent, image } = sneaker;
+  const hasStockInfo = typeof sneaker.is_in_stock === "boolean";
+  const isOutOfStock = hasStockInfo && sneaker.is_in_stock === false;
+  const numericStock = Number(sneaker.total_stock ?? 0);
+  const stockText = isOutOfStock
+    ? "Out of Stock"
+    : numericStock > 0 && numericStock <= 5
+      ? `Only ${numericStock} left`
+      : "In Stock";
+  const stockClass = isOutOfStock
+    ? "sneaker-stock-badge out"
+    : numericStock > 0 && numericStock <= 5
+      ? "sneaker-stock-badge low"
+      : "sneaker-stock-badge in";
+  const isButtonDisabled = disabled || isOutOfStock;
+  const formattedPrice = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(price);
 
   return (
     <div className="sneaker-card">
-
-      {/* Product image */}
-      <div className="sneaker-image-wrap">
-        {primary_image ? (
-          <img
-            src={primary_image}
-            alt={`${brand_name} ${name}`}
-            className="sneaker-image"
-            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-          />
-        ) : null}
-        <div className="sneaker-emoji" style={{ display: primary_image ? 'none' : 'flex' }}>👟</div>
+      <div className="sneaker-media">
+        {image ? (
+          <img className="sneaker-image" src={image} alt={`${brand} ${name}`} />
+        ) : (
+          <div className="sneaker-fallback" aria-hidden="true">
+            <span>{brand.slice(0, 2).toUpperCase()}</span>
+          </div>
+        )}
+        {accent ? <span className="sneaker-accent-badge">{accent}</span> : null}
+        {hasStockInfo ? <span className={stockClass}>{stockText}</span> : null}
       </div>
 
-      {/* Sneaker details */}
       <div className="sneaker-info">
-        <span className="sneaker-brand">{brand_name}</span>
+        <span className="sneaker-brand">{brand}</span>
         <h3 className="sneaker-name">{name}</h3>
-        {colorway && <p className="sneaker-colorway">{colorway}</p>}
-
+        <p className="sneaker-description">{description}</p>
         <div className="sneaker-footer">
-          <div className="sneaker-price-wrap">
-            {hasDiscount ? (
-              <>
-                <span className="sneaker-price">${discounted_price}</span>
-                <span className="sneaker-original-price">${price}</span>
-                <span className="sneaker-discount">-{discount_percentage}%</span>
-              </>
-            ) : (
-              <span className="sneaker-price">${price}</span>
-            )}
-          </div>
-          {!is_in_stock && <span className="sneaker-out-of-stock">Out of stock</span>}
-          <button className="sneaker-btn" disabled={!is_in_stock}>
-            Add to Cart
+          <span className="sneaker-price">{formattedPrice}</span>
+          <button
+            className="sneaker-btn"
+            disabled={isButtonDisabled}
+            onClick={() => onAddToCart?.(sneaker)}
+            type="button"
+          >
+            {isOutOfStock ? "Out of Stock" : "Add to Cart"}
           </button>
         </div>
       </div>

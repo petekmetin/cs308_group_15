@@ -1,10 +1,10 @@
 from rest_framework import generics, filters, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.db.models import Q
 
-from .models import Brand, Category, Sneaker, Wishlist, Review
+from .models import Brand, Category, Sneaker, SneakerSize, Wishlist, Review
 from .serializers import (
     BrandSerializer, CategorySerializer,
     SneakerListSerializer, SneakerDetailSerializer,
@@ -67,32 +67,65 @@ class SneakerListView(generics.ListAPIView):
     serializer_class = SneakerListSerializer
     permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'colorway', 'sku', 'brand__name', 'description']
-    ordering_fields = ['price', 'created_at', 'popularity_score', 'name']
-    ordering = ['-created_at']
+    search_fields = ['name', 'description']
+    ordering_fields = ['price', 'popularity_score']
+    ordering = ['-popularity_score']
 
     def get_queryset(self):
         qs = Sneaker.objects.filter(is_active=True).select_related('brand', 'category')
 
-        brand = self.request.query_params.get('brand')
-        category = self.request.query_params.get('category')
+        brand_ids = self.request.query_params.getlist('brand')
+        category_ids = self.request.query_params.getlist('category')
+        size_filters = self.request.query_params.getlist('size')
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
-        in_stock = self.request.query_params.get('in_stock')
         featured = self.request.query_params.get('featured')
 
-        if brand:
-            qs = qs.filter(brand_id=brand)
-        if category:
-            qs = qs.filter(category_id=category)
+        if brand_ids:
+            qs = qs.filter(brand_id__in=brand_ids)
+        if category_ids:
+            qs = qs.filter(category_id__in=category_ids)
         if min_price:
             qs = qs.filter(price__gte=min_price)
         if max_price:
             qs = qs.filter(price__lte=max_price)
         if featured == 'true':
             qs = qs.filter(is_featured=True)
+        if size_filters:
+            size_query = Q()
+            for raw_size in size_filters:
+                if ':' not in raw_size:
+                    continue
+                size_system, size_value = raw_size.split(':', 1)
+                size_system = size_system.strip().upper()
+                size_value = size_value.strip()
+                if not size_system or not size_value:
+                    continue
+                size_query |= Q(
+                    sizes__size_system=size_system,
+                    sizes__size=size_value,
+                )
+            if size_query:
+                qs = qs.filter(size_query)
 
-        return qs
+        return qs.distinct()
+
+
+class SneakerSizeOptionsView(generics.GenericAPIView):
+    """
+    GET /api/products/sizes/options/
+    Returns distinct size options for active sneakers.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        size_options = (
+            SneakerSize.objects.filter(sneaker__is_active=True)
+            .values('size_system', 'size')
+            .distinct()
+            .order_by('size_system', 'size')
+        )
+        return Response(list(size_options))
 
 
 class SneakerDetailView(generics.RetrieveUpdateDestroyAPIView):

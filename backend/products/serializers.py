@@ -2,6 +2,18 @@ from rest_framework import serializers
 from .models import Brand, Category, Sneaker, SneakerSize, SneakerImage, Wishlist, Review
 
 
+def build_media_url(request, file_field):
+    if not file_field:
+        return None
+    name = getattr(file_field, 'name', '')
+    if isinstance(name, str) and name.startswith(('http://', 'https://')):
+        return name
+    url = file_field.url
+    if request is None:
+        return url
+    return request.build_absolute_uri(url)
+
+
 class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
@@ -21,9 +33,15 @@ class SneakerSizeSerializer(serializers.ModelSerializer):
 
 
 class SneakerImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = SneakerImage
         fields = ['id', 'image_url', 'alt_text', 'is_primary', 'order']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return build_media_url(request, obj.image)
 
 
 class SneakerListSerializer(serializers.ModelSerializer):
@@ -32,7 +50,9 @@ class SneakerListSerializer(serializers.ModelSerializer):
     Includes only what the product listing page needs.
     """
     brand_name = serializers.CharField(source='brand.name', read_only=True)
+    brand_id = serializers.IntegerField(source='brand.id', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    category_id = serializers.IntegerField(source='category.id', read_only=True)
     primary_image = serializers.SerializerMethodField()
     discounted_price = serializers.ReadOnlyField()
     is_in_stock = serializers.ReadOnlyField()
@@ -41,7 +61,8 @@ class SneakerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sneaker
         fields = [
-            'id', 'name', 'colorway', 'brand_name', 'category_name',
+            'id', 'name', 'description', 'colorway', 'brand_id', 'brand_name',
+            'category_id', 'category_name',
             'sku', 'price', 'discounted_price', 'discount_percentage',
             'is_in_stock', 'total_stock', 'is_featured', 'primary_image',
             'popularity_score', 'created_at'
@@ -51,7 +72,8 @@ class SneakerListSerializer(serializers.ModelSerializer):
         img = obj.images.filter(is_primary=True).first()
         if not img:
             img = obj.images.first()
-        return img.image_url if img else None
+        request = self.context.get('request')
+        return build_media_url(request, img.image if img else None)
 
 
 class SneakerDetailSerializer(serializers.ModelSerializer):

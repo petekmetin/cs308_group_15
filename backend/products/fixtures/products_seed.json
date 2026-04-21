@@ -1,0 +1,2327 @@
+[
+{
+  "model": "products.brand",
+  "pk": 1,
+  "fields": {
+    "name": "Nike",
+    "slug": "nike",
+    "description": "Just Do It.",
+    "logo_url": "",
+    "created_at": "2026-03-21T12:21:03.784Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 2,
+  "fields": {
+    "name": "Adidas",
+    "slug": "adidas",
+    "description": "Impossible Is Nothing.",
+    "logo_url": "",
+    "created_at": "2026-03-21T12:21:03.789Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 3,
+  "fields": {
+    "name": "Jordan",
+    "slug": "jordan",
+    "description": "Air Jordan brand by Nike.",
+    "logo_url": "",
+    "created_at": "2026-03-21T12:21:03.790Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 4,
+  "fields": {
+    "name": "New Balance",
+    "slug": "new-balance",
+    "description": "Fearlessly Independent.",
+    "logo_url": "",
+    "created_at": "2026-03-21T12:21:03.791Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 5,
+  "fields": {
+    "name": "Puma",
+    "slug": "puma",
+    "description": "Forever Faster.",
+    "logo_url": "",
+    "created_at": "2026-03-21T12:21:03.792Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 6,
+  "fields": {
+    "name": "Golden Goose",
+    "slug": "golden-goose",
+    "description": "Elegantly Aged.",
+    "logo_url": "",
+    "created_at": "2026-03-31T07:40:17.823Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 7,
+  "fields": {
+    "name": "ASICS",
+    "slug": "asics",
+    "description": "ASICS seeded brand",
+    "logo_url": "",
+    "created_at": "2026-04-21T12:49:38.024Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 8,
+  "fields": {
+    "name": "Converse",
+    "slug": "converse",
+    "description": "Converse seeded brand",
+    "logo_url": "",
+    "created_at": "2026-04-21T12:49:38.452Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 9,
+  "fields": {
+    "name": "Reebok",
+    "slug": "reebok",
+    "description": "Reebok seeded brand",
+    "logo_url": "",
+    "created_at": "2026-04-21T12:49:38.594Z"
+  }
+},
+{
+  "model": "products.brand",
+  "pk": 11,
+  "fields": {
+    "name": "Vans",
+    "slug": "vans",
+    "description": "Vans seeded brand",
+    "logo_url": "",
+    "created_at": "2026-04-21T12:49:39.195Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": 1,
+  "fields": {
+    "name": "Lifestyle",
+    "slug": "lifestyle",
+    "description": "Everyday casual sneakers",
+    "created_at": "2026-03-21T12:21:03.794Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": 2,
+  "fields": {
+    "name": "Basketball",
+    "slug": "basketball",
+    "description": "High-performance basketball shoes",
+    "created_at": "2026-03-21T12:21:03.798Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": 3,
+  "fields": {
+    "name": "Running",
+    "slug": "running",
+    "description": "Engineered for speed and comfort",
+    "created_at": "2026-03-21T12:21:03.799Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": 4,
+  "fields": {
+    "name": "Skate",
+    "slug": "skate",
+    "description": "Built for the board",
+    "created_at": "2026-03-21T12:21:03.800Z"
+  }
+},
+{
+  "model": "products.category",
+  "pk": 5,
+  "fields": {
+    "name": "Training",
+    "slug": "training",
+    "description": "Gym and cross-training footwear",
+    "created_at": "2026-03-21T12:21:03.801Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 1,
+  "fields": {
+    "brand": 1,
+    "category": 1,
+    "name": "Air Force 1 '07",
+    "model_number": "CW2288-111",
+    "colorway": "White/White-White",
+    "sku": "NIKE-AF1-WHITE",
+    "description": "The radically simple AF1 defined a sneaker era.",
+    "serial_number": "SN-NIKE-001",
+    "price": "109.99",
+    "original_price": null,
+    "cost_price": "55.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "2 years manufacturer warranty",
+    "distributor_information": "Nike Inc. — distributed via Nike Direct",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 1,
+    "view_count": 1,
+    "created_at": "2026-03-21T12:21:03.805Z",
+    "updated_at": "2026-04-21T09:56:11.537Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 2,
+  "fields": {
+    "brand": 2,
+    "category": 1,
+    "name": "Stan Smith",
+    "model_number": "M20324",
+    "colorway": "Cloud White/Green",
+    "sku": "ADI-STAN-GRN",
+    "description": "A tennis classic reborn. Clean, minimal, timeless.",
+    "serial_number": "SN-ADI-001",
+    "price": "89.99",
+    "original_price": null,
+    "cost_price": "42.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Adidas AG — distributed globally",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 0,
+    "view_count": 0,
+    "created_at": "2026-03-21T12:21:03.820Z",
+    "updated_at": "2026-04-21T10:02:04.393Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 3,
+  "fields": {
+    "brand": 3,
+    "category": 2,
+    "name": "Air Jordan 1 Retro High OG",
+    "model_number": "555088-161",
+    "colorway": "White/Varsity Red-Black",
+    "sku": "JRD-AJ1-RED",
+    "description": "The shoe that started it all. Chicago colourway.",
+    "serial_number": "SN-JRD-001",
+    "price": "180.00",
+    "original_price": null,
+    "cost_price": "90.00",
+    "discount_percentage": "10.00",
+    "warranty_status": "2 years",
+    "distributor_information": "Jordan Brand / Nike — limited release",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 0,
+    "view_count": 0,
+    "created_at": "2026-03-21T12:21:03.824Z",
+    "updated_at": "2026-04-21T10:00:41.811Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 4,
+  "fields": {
+    "brand": 4,
+    "category": 3,
+    "name": "990v6",
+    "model_number": "M990GL6",
+    "colorway": "Grey/Silver",
+    "sku": "NB-990V6-GRY",
+    "description": "Made in USA. Premium cushioning, heritage silhouette.",
+    "serial_number": "SN-NB-001",
+    "price": "199.99",
+    "original_price": null,
+    "cost_price": "100.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "New Balance Athletics — made in USA line",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 0,
+    "view_count": 0,
+    "created_at": "2026-03-21T12:21:03.828Z",
+    "updated_at": "2026-04-21T09:59:16.865Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 5,
+  "fields": {
+    "brand": 1,
+    "category": 3,
+    "name": "Air Max 90",
+    "model_number": "CN8490-001",
+    "colorway": "Black/White-Dark Grey",
+    "sku": "NIKE-AM90-BLK",
+    "description": "Visible Air cushioning. A running icon since 1990.",
+    "serial_number": "SN-NIKE-002",
+    "price": "130.00",
+    "original_price": null,
+    "cost_price": "62.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "2 years",
+    "distributor_information": "Nike Inc.",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 0,
+    "view_count": 0,
+    "created_at": "2026-03-21T12:21:03.832Z",
+    "updated_at": "2026-04-21T09:56:20.911Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 6,
+  "fields": {
+    "brand": 6,
+    "category": 1,
+    "name": "Super-Star",
+    "model_number": "GMF00102.F002185.10283",
+    "colorway": "White/Silver Heel/Black Star",
+    "sku": "GG-SS-WHT-SLV",
+    "description": "Handcrafted Italian sneaker with signature distressed finish and iconic star patch.",
+    "serial_number": "SN-GG-001",
+    "price": "530.00",
+    "original_price": null,
+    "cost_price": "240.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Golden Goose S.p.A.",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 0,
+    "view_count": 0,
+    "created_at": "2026-03-31T07:56:47.961Z",
+    "updated_at": "2026-04-21T09:57:49.768Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 7,
+  "fields": {
+    "brand": 1,
+    "category": 3,
+    "name": "Air Zoom Tempo",
+    "model_number": "MDL-0001",
+    "colorway": "Black/Volt",
+    "sku": "NIKE-AUTO-001",
+    "description": "Air Zoom Tempo by Nike. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0001",
+    "price": "104.99",
+    "original_price": "114.99",
+    "cost_price": "56.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 99,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:37.828Z",
+    "updated_at": "2026-04-21T13:12:06.237Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 8,
+  "fields": {
+    "brand": 2,
+    "category": 3,
+    "name": "Ultraboost Light",
+    "model_number": "MDL-0002",
+    "colorway": "White/Core Black",
+    "sku": "ADIDAS-AUTO-002",
+    "description": "Ultraboost Light by Adidas. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0002",
+    "price": "109.99",
+    "original_price": "119.99",
+    "cost_price": "57.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 98,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:37.954Z",
+    "updated_at": "2026-04-21T13:11:07.162Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 9,
+  "fields": {
+    "brand": 7,
+    "category": 3,
+    "name": "Gel-Kayano 30",
+    "model_number": "MDL-0003",
+    "colorway": "Blue/Orange",
+    "sku": "ASICS-AUTO-003",
+    "description": "Gel-Kayano 30 by ASICS. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0003",
+    "price": "114.99",
+    "original_price": "124.99",
+    "cost_price": "58.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 97,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.026Z",
+    "updated_at": "2026-04-21T13:10:31.266Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 10,
+  "fields": {
+    "brand": 4,
+    "category": 1,
+    "name": "574 Legacy",
+    "model_number": "MDL-0004",
+    "colorway": "Grey/Navy",
+    "sku": "NEW-BALA-AUTO-004",
+    "description": "574 Legacy by New Balance. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0004",
+    "price": "119.99",
+    "original_price": "129.99",
+    "cost_price": "59.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 96,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.099Z",
+    "updated_at": "2026-04-21T13:10:00.158Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 11,
+  "fields": {
+    "brand": 5,
+    "category": 1,
+    "name": "RS-X Heritage",
+    "model_number": "MDL-0005",
+    "colorway": "White/Red",
+    "sku": "PUMA-AUTO-005",
+    "description": "RS-X Heritage by Puma. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0005",
+    "price": "124.99",
+    "original_price": "134.99",
+    "cost_price": "60.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 95,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.170Z",
+    "updated_at": "2026-04-21T13:09:28.204Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 12,
+  "fields": {
+    "brand": 3,
+    "category": 2,
+    "name": "Air Jordan 4 Retro",
+    "model_number": "MDL-0006",
+    "colorway": "Bred",
+    "sku": "JORDAN-AUTO-006",
+    "description": "Air Jordan 4 Retro by Jordan. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0006",
+    "price": "129.99",
+    "original_price": "139.99",
+    "cost_price": "61.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 94,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.242Z",
+    "updated_at": "2026-04-21T13:08:49.523Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 13,
+  "fields": {
+    "brand": 2,
+    "category": 2,
+    "name": "Dame 9",
+    "model_number": "MDL-0007",
+    "colorway": "Core Black/Gold",
+    "sku": "ADIDAS-AUTO-007",
+    "description": "Dame 9 by Adidas. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0007",
+    "price": "134.99",
+    "original_price": "144.99",
+    "cost_price": "62.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 93,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.315Z",
+    "updated_at": "2026-04-21T13:08:07.710Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 14,
+  "fields": {
+    "brand": 1,
+    "category": 2,
+    "name": "KD 17",
+    "model_number": "MDL-0008",
+    "colorway": "Purple/Teal",
+    "sku": "NIKE-AUTO-008",
+    "description": "KD 17 by Nike. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0008",
+    "price": "139.99",
+    "original_price": "149.99",
+    "cost_price": "63.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 92,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.383Z",
+    "updated_at": "2026-04-21T13:07:22.576Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 15,
+  "fields": {
+    "brand": 8,
+    "category": 4,
+    "name": "One Star Pro",
+    "model_number": "MDL-0009",
+    "colorway": "Black/White",
+    "sku": "CONVERSE-AUTO-009",
+    "description": "One Star Pro by Converse. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0009",
+    "price": "144.99",
+    "original_price": "154.99",
+    "cost_price": "64.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 91,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.454Z",
+    "updated_at": "2026-04-21T13:06:35.647Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 16,
+  "fields": {
+    "brand": 1,
+    "category": 4,
+    "name": "SB Dunk Low Pro",
+    "model_number": "MDL-0010",
+    "colorway": "Green/Gum",
+    "sku": "NIKE-AUTO-010",
+    "description": "SB Dunk Low Pro by Nike. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0010",
+    "price": "149.99",
+    "original_price": "159.99",
+    "cost_price": "65.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 90,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.524Z",
+    "updated_at": "2026-04-21T13:05:57.946Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 17,
+  "fields": {
+    "brand": 9,
+    "category": 5,
+    "name": "Nano X4",
+    "model_number": "MDL-0011",
+    "colorway": "Grey/Blue",
+    "sku": "REEBOK-AUTO-011",
+    "description": "Nano X4 by Reebok. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0011",
+    "price": "154.99",
+    "original_price": "164.99",
+    "cost_price": "66.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 89,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.596Z",
+    "updated_at": "2026-04-21T13:05:27.307Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 18,
+  "fields": {
+    "brand": 1,
+    "category": 5,
+    "name": "Metcon 10",
+    "model_number": "MDL-0012",
+    "colorway": "Black/Red",
+    "sku": "NIKE-AUTO-012",
+    "description": "Metcon 10 by Nike. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0012",
+    "price": "159.99",
+    "original_price": "169.99",
+    "cost_price": "67.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 88,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.666Z",
+    "updated_at": "2026-04-21T13:04:40.216Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 20,
+  "fields": {
+    "brand": 2,
+    "category": 1,
+    "name": "Forum Low CL",
+    "model_number": "MDL-0014",
+    "colorway": "White/Green",
+    "sku": "ADIDAS-AUTO-014",
+    "description": "Forum Low CL by Adidas. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0014",
+    "price": "169.99",
+    "original_price": "179.99",
+    "cost_price": "69.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 86,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.818Z",
+    "updated_at": "2026-04-21T12:58:06.818Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 21,
+  "fields": {
+    "brand": 8,
+    "category": 1,
+    "name": "Chuck 70 High",
+    "model_number": "MDL-0015",
+    "colorway": "Parchment",
+    "sku": "CONVERSE-AUTO-015",
+    "description": "Chuck 70 High by Converse. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0015",
+    "price": "174.99",
+    "original_price": "184.99",
+    "cost_price": "70.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 85,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.887Z",
+    "updated_at": "2026-04-21T12:56:52.078Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 22,
+  "fields": {
+    "brand": 5,
+    "category": 1,
+    "name": "Suede Classic XXI",
+    "model_number": "MDL-0016",
+    "colorway": "Navy/White",
+    "sku": "PUMA-AUTO-016",
+    "description": "Suede Classic XXI by Puma. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0016",
+    "price": "179.99",
+    "original_price": "189.99",
+    "cost_price": "71.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 84,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:38.956Z",
+    "updated_at": "2026-04-21T12:56:10.750Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 23,
+  "fields": {
+    "brand": 1,
+    "category": 2,
+    "name": "GT Hustle 3",
+    "model_number": "MDL-0017",
+    "colorway": "White/Crimson",
+    "sku": "NIKE-AUTO-017",
+    "description": "GT Hustle 3 by Nike. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0017",
+    "price": "184.99",
+    "original_price": "194.99",
+    "cost_price": "72.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 83,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:39.025Z",
+    "updated_at": "2026-04-21T12:55:41.528Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 24,
+  "fields": {
+    "brand": 4,
+    "category": 3,
+    "name": "Fresh Foam 1080",
+    "model_number": "MDL-0018",
+    "colorway": "Sea Salt/Blue",
+    "sku": "NEW-BALA-AUTO-018",
+    "description": "Fresh Foam 1080 by New Balance. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0018",
+    "price": "189.99",
+    "original_price": "199.99",
+    "cost_price": "73.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 82,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:39.128Z",
+    "updated_at": "2026-04-21T12:55:03.366Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 25,
+  "fields": {
+    "brand": 11,
+    "category": 4,
+    "name": "Sk8-Hi",
+    "model_number": "MDL-0019",
+    "colorway": "Black/True White",
+    "sku": "VANS-AUTO-019",
+    "description": "Sk8-Hi by Vans. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0019",
+    "price": "194.99",
+    "original_price": "204.99",
+    "cost_price": "74.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": false,
+    "popularity_score": 81,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:39.196Z",
+    "updated_at": "2026-04-21T12:54:23.218Z"
+  }
+},
+{
+  "model": "products.sneaker",
+  "pk": 26,
+  "fields": {
+    "brand": 5,
+    "category": 2,
+    "name": "Clyde All-Pro",
+    "model_number": "MDL-0020",
+    "colorway": "Orange/Black",
+    "sku": "PUMA-AUTO-020",
+    "description": "Clyde All-Pro by Puma. Seeded product for local dev and test data.",
+    "serial_number": "SER-AUTO-0020",
+    "price": "199.99",
+    "original_price": "209.99",
+    "cost_price": "75.00",
+    "discount_percentage": "0.00",
+    "warranty_status": "1 year",
+    "distributor_information": "Local seed data distributor",
+    "is_active": true,
+    "is_featured": true,
+    "popularity_score": 80,
+    "view_count": 0,
+    "created_at": "2026-04-21T12:49:39.263Z",
+    "updated_at": "2026-04-21T12:53:34.354Z"
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 1,
+  "fields": {
+    "sneaker": 1,
+    "size": "7",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 2,
+  "fields": {
+    "sneaker": 1,
+    "size": "8",
+    "size_system": "US",
+    "stock": 10
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 3,
+  "fields": {
+    "sneaker": 1,
+    "size": "9",
+    "size_system": "US",
+    "stock": 15
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 4,
+  "fields": {
+    "sneaker": 1,
+    "size": "10",
+    "size_system": "US",
+    "stock": 12
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 5,
+  "fields": {
+    "sneaker": 1,
+    "size": "11",
+    "size_system": "US",
+    "stock": 8
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 6,
+  "fields": {
+    "sneaker": 1,
+    "size": "12",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 7,
+  "fields": {
+    "sneaker": 2,
+    "size": "7",
+    "size_system": "US",
+    "stock": 8
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 8,
+  "fields": {
+    "sneaker": 2,
+    "size": "8",
+    "size_system": "US",
+    "stock": 12
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 9,
+  "fields": {
+    "sneaker": 2,
+    "size": "9",
+    "size_system": "US",
+    "stock": 10
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 10,
+  "fields": {
+    "sneaker": 2,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 11,
+  "fields": {
+    "sneaker": 2,
+    "size": "11",
+    "size_system": "US",
+    "stock": 5
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 12,
+  "fields": {
+    "sneaker": 3,
+    "size": "8",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 13,
+  "fields": {
+    "sneaker": 3,
+    "size": "9",
+    "size_system": "US",
+    "stock": 5
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 14,
+  "fields": {
+    "sneaker": 3,
+    "size": "10",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 15,
+  "fields": {
+    "sneaker": 3,
+    "size": "11",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 16,
+  "fields": {
+    "sneaker": 3,
+    "size": "12",
+    "size_system": "US",
+    "stock": 2
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 17,
+  "fields": {
+    "sneaker": 4,
+    "size": "8",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 18,
+  "fields": {
+    "sneaker": 4,
+    "size": "9",
+    "size_system": "US",
+    "stock": 8
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 19,
+  "fields": {
+    "sneaker": 4,
+    "size": "10",
+    "size_system": "US",
+    "stock": 10
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 20,
+  "fields": {
+    "sneaker": 4,
+    "size": "11",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 21,
+  "fields": {
+    "sneaker": 4,
+    "size": "12",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 22,
+  "fields": {
+    "sneaker": 5,
+    "size": "7",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 23,
+  "fields": {
+    "sneaker": 5,
+    "size": "8",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 24,
+  "fields": {
+    "sneaker": 5,
+    "size": "9",
+    "size_system": "US",
+    "stock": 11
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 25,
+  "fields": {
+    "sneaker": 5,
+    "size": "10",
+    "size_system": "US",
+    "stock": 8
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 26,
+  "fields": {
+    "sneaker": 5,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 27,
+  "fields": {
+    "sneaker": 6,
+    "size": "44",
+    "size_system": "EU",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 28,
+  "fields": {
+    "sneaker": 6,
+    "size": "42",
+    "size_system": "EU",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 29,
+  "fields": {
+    "sneaker": 6,
+    "size": "38",
+    "size_system": "EU",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 30,
+  "fields": {
+    "sneaker": 7,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 31,
+  "fields": {
+    "sneaker": 7,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 32,
+  "fields": {
+    "sneaker": 7,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 33,
+  "fields": {
+    "sneaker": 7,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 34,
+  "fields": {
+    "sneaker": 7,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 35,
+  "fields": {
+    "sneaker": 8,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 36,
+  "fields": {
+    "sneaker": 8,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 37,
+  "fields": {
+    "sneaker": 8,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 38,
+  "fields": {
+    "sneaker": 8,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 39,
+  "fields": {
+    "sneaker": 8,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 40,
+  "fields": {
+    "sneaker": 9,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 41,
+  "fields": {
+    "sneaker": 9,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 42,
+  "fields": {
+    "sneaker": 9,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 43,
+  "fields": {
+    "sneaker": 9,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 44,
+  "fields": {
+    "sneaker": 9,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 45,
+  "fields": {
+    "sneaker": 10,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 46,
+  "fields": {
+    "sneaker": 10,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 47,
+  "fields": {
+    "sneaker": 10,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 48,
+  "fields": {
+    "sneaker": 10,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 49,
+  "fields": {
+    "sneaker": 10,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 50,
+  "fields": {
+    "sneaker": 11,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 51,
+  "fields": {
+    "sneaker": 11,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 52,
+  "fields": {
+    "sneaker": 11,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 53,
+  "fields": {
+    "sneaker": 11,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 54,
+  "fields": {
+    "sneaker": 11,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 55,
+  "fields": {
+    "sneaker": 12,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 56,
+  "fields": {
+    "sneaker": 12,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 57,
+  "fields": {
+    "sneaker": 12,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 58,
+  "fields": {
+    "sneaker": 12,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 59,
+  "fields": {
+    "sneaker": 12,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 60,
+  "fields": {
+    "sneaker": 13,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 61,
+  "fields": {
+    "sneaker": 13,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 62,
+  "fields": {
+    "sneaker": 13,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 63,
+  "fields": {
+    "sneaker": 13,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 64,
+  "fields": {
+    "sneaker": 13,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 65,
+  "fields": {
+    "sneaker": 14,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 66,
+  "fields": {
+    "sneaker": 14,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 67,
+  "fields": {
+    "sneaker": 14,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 68,
+  "fields": {
+    "sneaker": 14,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 69,
+  "fields": {
+    "sneaker": 14,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 70,
+  "fields": {
+    "sneaker": 15,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 71,
+  "fields": {
+    "sneaker": 15,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 72,
+  "fields": {
+    "sneaker": 15,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 73,
+  "fields": {
+    "sneaker": 15,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 74,
+  "fields": {
+    "sneaker": 15,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 75,
+  "fields": {
+    "sneaker": 16,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 76,
+  "fields": {
+    "sneaker": 16,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 77,
+  "fields": {
+    "sneaker": 16,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 78,
+  "fields": {
+    "sneaker": 16,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 79,
+  "fields": {
+    "sneaker": 16,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 80,
+  "fields": {
+    "sneaker": 17,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 81,
+  "fields": {
+    "sneaker": 17,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 82,
+  "fields": {
+    "sneaker": 17,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 83,
+  "fields": {
+    "sneaker": 17,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 84,
+  "fields": {
+    "sneaker": 17,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 85,
+  "fields": {
+    "sneaker": 18,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 86,
+  "fields": {
+    "sneaker": 18,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 87,
+  "fields": {
+    "sneaker": 18,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 88,
+  "fields": {
+    "sneaker": 18,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 89,
+  "fields": {
+    "sneaker": 18,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 95,
+  "fields": {
+    "sneaker": 20,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 96,
+  "fields": {
+    "sneaker": 20,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 97,
+  "fields": {
+    "sneaker": 20,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 98,
+  "fields": {
+    "sneaker": 20,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 99,
+  "fields": {
+    "sneaker": 20,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 100,
+  "fields": {
+    "sneaker": 21,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 101,
+  "fields": {
+    "sneaker": 21,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 102,
+  "fields": {
+    "sneaker": 21,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 103,
+  "fields": {
+    "sneaker": 21,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 104,
+  "fields": {
+    "sneaker": 21,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 105,
+  "fields": {
+    "sneaker": 22,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 106,
+  "fields": {
+    "sneaker": 22,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 107,
+  "fields": {
+    "sneaker": 22,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 108,
+  "fields": {
+    "sneaker": 22,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 109,
+  "fields": {
+    "sneaker": 22,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 110,
+  "fields": {
+    "sneaker": 23,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 111,
+  "fields": {
+    "sneaker": 23,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 112,
+  "fields": {
+    "sneaker": 23,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 113,
+  "fields": {
+    "sneaker": 23,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 114,
+  "fields": {
+    "sneaker": 23,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 115,
+  "fields": {
+    "sneaker": 24,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 116,
+  "fields": {
+    "sneaker": 24,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 117,
+  "fields": {
+    "sneaker": 24,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 118,
+  "fields": {
+    "sneaker": 24,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 119,
+  "fields": {
+    "sneaker": 24,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 120,
+  "fields": {
+    "sneaker": 25,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 121,
+  "fields": {
+    "sneaker": 25,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 122,
+  "fields": {
+    "sneaker": 25,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 123,
+  "fields": {
+    "sneaker": 25,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 124,
+  "fields": {
+    "sneaker": 25,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 125,
+  "fields": {
+    "sneaker": 26,
+    "size": "8",
+    "size_system": "US",
+    "stock": 4
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 126,
+  "fields": {
+    "sneaker": 26,
+    "size": "9",
+    "size_system": "US",
+    "stock": 7
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 127,
+  "fields": {
+    "sneaker": 26,
+    "size": "10",
+    "size_system": "US",
+    "stock": 9
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 128,
+  "fields": {
+    "sneaker": 26,
+    "size": "11",
+    "size_system": "US",
+    "stock": 6
+  }
+},
+{
+  "model": "products.sneakersize",
+  "pk": 129,
+  "fields": {
+    "sneaker": 26,
+    "size": "12",
+    "size_system": "US",
+    "stock": 3
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 7,
+  "fields": {
+    "sneaker": 5,
+    "image": "products/sneakers/WMNSAIRMAX90.png.avif",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 9,
+  "fields": {
+    "sneaker": 1,
+    "image": "products/sneakers/AIRFORCE107.png.avif",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 10,
+  "fields": {
+    "sneaker": 6,
+    "image": "products/sneakers/Golden-Goose-Super-Star-White-Ice-Gray-Gold-Glitter-W.webp",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 11,
+  "fields": {
+    "sneaker": 4,
+    "image": "products/sneakers/NBM990GL6_10.jpg",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 12,
+  "fields": {
+    "sneaker": 3,
+    "image": "products/sneakers/27a4a1e060b93883f735864a707a4c22_2048x2048.jpg.webp",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 13,
+  "fields": {
+    "sneaker": 2,
+    "image": "products/sneakers/Stan_Smith_Ayakkabi_Beyaz_M20324_01_standard.jpg.avif",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 14,
+  "fields": {
+    "sneaker": 7,
+    "image": "products/sneakers/main-square_4ac4ece3-c58c-45fa-b3c3-7332bbe0fb7d_1080x.jpg.webp",
+    "alt_text": "Air Zoom Tempo primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 16,
+  "fields": {
+    "sneaker": 8,
+    "image": "products/sneakers/54178ba7-715e-401d-a736-a7bfb28a2abe_size3840x3840_cropCenter.jpg",
+    "alt_text": "Ultraboost Light primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 18,
+  "fields": {
+    "sneaker": 9,
+    "image": "products/sneakers/as-1011b548-401_001.jpg.avif",
+    "alt_text": "Gel-Kayano 30 primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 20,
+  "fields": {
+    "sneaker": 10,
+    "image": "products/sneakers/New-Balance-574-Legacy-Navy-Grey-Pink.jpg.avif",
+    "alt_text": "574 Legacy primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 22,
+  "fields": {
+    "sneaker": 11,
+    "image": "products/sneakers/b4873c5b-288b-4682-ab74-2426002bf892_size3840x3840_cropCenter.jpg",
+    "alt_text": "RS-X Heritage primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 24,
+  "fields": {
+    "sneaker": 12,
+    "image": "products/sneakers/Nike-Air-Jordan-4-Retro-Bred-Reimagined-FV5029-006-1123x800.jpg",
+    "alt_text": "Air Jordan 4 Retro primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 26,
+  "fields": {
+    "sneaker": 13,
+    "image": "products/sneakers/Dame_9_Ayakkabi_Gumus_JH6633_01_00_standard.jpg.avif",
+    "alt_text": "Dame 9 primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 28,
+  "fields": {
+    "sneaker": 14,
+    "image": "products/sneakers/3f43cd78-7b5c-4481-a594-300d65467598.jpg",
+    "alt_text": "KD 17 primary",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 54,
+  "fields": {
+    "sneaker": 26,
+    "image": "products/sneakers/Clyde-All-Pro-Basketball-Shoes.avif",
+    "alt_text": "",
+    "is_primary": false,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 55,
+  "fields": {
+    "sneaker": 25,
+    "image": "products/sneakers/638895230078909482.jpg.avif",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 56,
+  "fields": {
+    "sneaker": 24,
+    "image": "products/sneakers/34e1b681-02b9-459f-bdd1-b88c0e245e4f_size2010x2010_cropCenter.jpg.webp",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 57,
+  "fields": {
+    "sneaker": 23,
+    "image": "products/sneakers/0240862_nike-g-t-hustle-3-fv5953-801.jpeg",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 58,
+  "fields": {
+    "sneaker": 22,
+    "image": "products/sneakers/878cbf8b-8d30-41a4-b353-c083a5f8c77c_size3840x3840_cropCenter.jpg.webp",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 59,
+  "fields": {
+    "sneaker": 21,
+    "image": "products/sneakers/824ee32c-9382-44c1-b1f0-72851d91e751_size2010x2010_cropCenter.jpg.webp",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 0
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 60,
+  "fields": {
+    "sneaker": 20,
+    "image": "products/sneakers/32afb1bd-dff3-45cf-a7fd-607b5e6ba1e3_size3840x3840_cropCenter.jpg",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 1
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 61,
+  "fields": {
+    "sneaker": 18,
+    "image": "products/sneakers/nike-metcon-10-varsity-red-erkek-fitness-ayakkabisi-hj1875-001-208059-67-B.jpg.webp",
+    "alt_text": "",
+    "is_primary": true,
+    "order": 1
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 62,
+  "fields": {
+    "sneaker": 17,
+    "image": "products/sneakers/RBK1100074184-1.jpg.webp",
+    "alt_text": "Nano X4 primary",
+    "is_primary": true,
+    "order": 1
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 63,
+  "fields": {
+    "sneaker": 16,
+    "image": "products/sneakers/Nike-SB-Dunk-Low-Island-Green-Gum-Product.jpg.avif",
+    "alt_text": "SB Dunk Low Pro primary",
+    "is_primary": true,
+    "order": 1
+  }
+},
+{
+  "model": "products.sneakerimage",
+  "pk": 64,
+  "fields": {
+    "sneaker": 15,
+    "image": "products/sneakers/67d1ca52-add1-4c20-a7ec-40ba32dc6f30.jpg.webp",
+    "alt_text": "One Star Pro primary",
+    "is_primary": true,
+    "order": 0
+  }
+}
+]
