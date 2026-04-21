@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -7,11 +8,43 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key")
 
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+def env_bool(key, default=False):
+    value = os.getenv(key)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on'}
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+
+def env_int(key, default=0):
+    value = os.getenv(key)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+def env_csv(key, default=''):
+    return [item.strip() for item in os.getenv(key, default).split(',') if item.strip()]
+
+
+DEBUG = env_bool('DJANGO_DEBUG', env_bool('DEBUG', False))
+RUNNING_TESTS = 'test' in sys.argv
+SECURITY_DEFAULTS_ENABLED = (not DEBUG) and (not RUNNING_TESTS)
+
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-local-only-1f86f20e-f120-4ce8-9bf6-c5cb3df2f365-4k7w'
+    else:
+        raise RuntimeError('Set DJANGO_SECRET_KEY or SECRET_KEY when DJANGO_DEBUG is false.')
+
+ALLOWED_HOSTS = env_csv(
+    'DJANGO_ALLOWED_HOSTS',
+    os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost'),
+)
 
 # ─── Applications ─────────────────────────────────────────────────────────────
 
@@ -139,8 +172,24 @@ SIMPLE_JWT = {
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000"
-).split(",")
+CORS_ALLOWED_ORIGINS = env_csv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://localhost:3000',
+)
 
 CORS_ALLOW_CREDENTIALS = True
+
+# ─── Security (production defaults) ───────────────────────────────────────────
+
+SECURE_HSTS_SECONDS = env_int(
+    'DJANGO_SECURE_HSTS_SECONDS',
+    31536000 if SECURITY_DEFAULTS_ENABLED else 0,
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    'DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS',
+    SECURITY_DEFAULTS_ENABLED,
+)
+SECURE_HSTS_PRELOAD = env_bool('DJANGO_SECURE_HSTS_PRELOAD', SECURITY_DEFAULTS_ENABLED)
+SECURE_SSL_REDIRECT = env_bool('DJANGO_SECURE_SSL_REDIRECT', SECURITY_DEFAULTS_ENABLED)
+SESSION_COOKIE_SECURE = env_bool('DJANGO_SESSION_COOKIE_SECURE', SECURITY_DEFAULTS_ENABLED)
+CSRF_COOKIE_SECURE = env_bool('DJANGO_CSRF_COOKIE_SECURE', SECURITY_DEFAULTS_ENABLED)

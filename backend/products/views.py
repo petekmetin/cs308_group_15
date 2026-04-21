@@ -9,6 +9,7 @@ from .serializers import (
     BrandSerializer, CategorySerializer,
     SneakerListSerializer, SneakerDetailSerializer,
     WishlistSerializer, ReviewSerializer, SneakerSizeStockSerializer,
+    SneakerPriceUpdateSerializer,
 )
 from config.permissions import IsProductManager, IsSalesManager, IsCustomer
 
@@ -202,21 +203,27 @@ def set_sneaker_price(request, pk):
     except Sneaker.DoesNotExist:
         return Response({'detail': 'Not found.'}, status=404)
 
-    price = request.data.get('price')
-    discount = request.data.get('discount_percentage', sneaker.discount_percentage)
+    serializer = SneakerPriceUpdateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
 
-    if price is not None:
-        sneaker.price = price
-    sneaker.discount_percentage = discount
-    sneaker.save(update_fields=['price', 'discount_percentage'])
+    validated = serializer.validated_data
+    update_fields = []
+
+    if 'price' in validated:
+        sneaker.price = validated['price']
+        update_fields.append('price')
+    if 'discount_percentage' in validated:
+        sneaker.discount_percentage = validated['discount_percentage']
+        update_fields.append('discount_percentage')
+
+    if update_fields:
+        sneaker.save(update_fields=update_fields)
 
     # Notify wishlist customers about discount if discount > 0
-    if float(discount) > 0:
-        wishlist_customers = Wishlist.objects.filter(
-            sneaker=sneaker
-        ).select_related('customer')
+    if sneaker.discount_percentage > 0:
         # In production: send email or push notification here
-        notified = [w.customer.email for w in wishlist_customers]
+        pass
 
     return Response(SneakerDetailSerializer(sneaker).data)
 

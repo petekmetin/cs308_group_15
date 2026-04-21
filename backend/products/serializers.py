@@ -39,6 +39,29 @@ class SneakerSizeStockSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class SneakerPriceUpdateSerializer(serializers.Serializer):
+    price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+    )
+    discount_percentage = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=100,
+        required=False,
+    )
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError(
+                {'detail': 'At least one of price or discount_percentage must be provided.'}
+            )
+        return attrs
+
+
 class SneakerImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 

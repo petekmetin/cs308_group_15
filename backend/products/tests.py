@@ -330,3 +330,61 @@ class ProductManagerWorkflowApiTests(APITestCase):
         self.assertEqual(public_reviews.status_code, 200)
         public_review_ids = {row['id'] for row in public_reviews.data.get('results', public_reviews.data)}
         self.assertIn(review_id, public_review_ids)
+
+
+class SalesManagerPricingApiTests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.sales_manager = user_model.objects.create_user(
+            email='sales@example.com',
+            username='sales_user',
+            first_name='Sales',
+            last_name='Manager',
+            password='StrongPass123!',
+            role='sales_manager',
+        )
+
+        brand = Brand.objects.create(name='Puma', slug='puma')
+        category = Category.objects.create(name='Training', slug='training')
+        self.sneaker = Sneaker.objects.create(
+            brand=brand,
+            category=category,
+            name='Velocity Pro',
+            model_number='VP-001',
+            colorway='White/Blue',
+            sku='SKU-VP-001',
+            serial_number='SER-VP-001',
+            description='Versatile training pair.',
+            price='120.00',
+            discount_percentage='5.00',
+            is_active=True,
+        )
+
+        self.client.force_authenticate(self.sales_manager)
+
+    def test_set_price_rejects_non_numeric_discount(self):
+        response = self.client.patch(
+            f'/api/products/sneakers/{self.sneaker.id}/set-price/',
+            {'discount_percentage': 'abc'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('discount_percentage', response.data)
+
+    def test_set_price_rejects_discount_above_hundred(self):
+        response = self.client.patch(
+            f'/api/products/sneakers/{self.sneaker.id}/set-price/',
+            {'discount_percentage': '101'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('discount_percentage', response.data)
+
+    def test_set_price_rejects_negative_price(self):
+        response = self.client.patch(
+            f'/api/products/sneakers/{self.sneaker.id}/set-price/',
+            {'price': '-1.00'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('price', response.data)
