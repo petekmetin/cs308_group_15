@@ -34,6 +34,8 @@ import LoginPage  from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import HomePage   from "./pages/HomePage";
 import CartPage   from "./pages/CartPage";
+import ProductManagerDashboard from "./pages/ProductManagerDashboard";
+import SneakerDetail from "./pages/SneakerDetail";
 
 // ============================================================
 // PrivateRoute — A "guard" component that protects pages
@@ -172,6 +174,24 @@ function App() {
           element={
             <PrivateRoute>
               <HomePage onAddToCart={addToCart} cartCount={cartCount} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/manager/dashboard"
+          element={
+            <PrivateRoute>
+              <ProductManagerDashboard cartCount={cartCount} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/sneakers/:id"
+          element={
+            <PrivateRoute>
+              <SneakerDetail cartCount={cartCount} />
             </PrivateRoute>
           }
         />

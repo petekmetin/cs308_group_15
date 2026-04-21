@@ -115,11 +115,13 @@ function HomePage({ onAddToCart, cartCount }) {
       .then((response) => {
         setUser(response.data);
         localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("user_role", response.data?.role || "");
       })
       .catch(() => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("user");
+        localStorage.removeItem("user_role");
         navigate("/login");
       });
   }, [navigate]);
@@ -286,6 +288,10 @@ function HomePage({ onAddToCart, cartCount }) {
     } finally {
       setAddingSneakerId(null);
     }
+  };
+
+  const handleViewDetails = (sneaker) => {
+    navigate(`/sneakers/${sneaker.id}`);
   };
 
   return (
@@ -498,6 +504,7 @@ function HomePage({ onAddToCart, cartCount }) {
                     key={sneaker.id}
                     sneaker={sneaker}
                     onAddToCart={handleAddToCart}
+                    onViewDetails={handleViewDetails}
                     disabled={addingSneakerId === sneaker.id}
                   />
                 ))}

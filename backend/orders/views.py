@@ -168,8 +168,11 @@ class DeliveryListView(generics.ListAPIView):
     permission_classes = [IsProductManager]
 
     def get_queryset(self):
-        return Delivery.objects.select_related('order__customer').filter(
-            is_completed=False
+        return (
+            Delivery.objects.select_related('order__customer')
+            .prefetch_related('order__items__sneaker')
+            .filter(is_completed=False)
+            .order_by('id')
         )
 
 
@@ -185,14 +188,35 @@ def update_delivery(request, pk):
     except Delivery.DoesNotExist:
         return Response({'detail': 'Not found.'}, status=404)
 
+    allowed_statuses = {'pending', 'in_transit', 'delivered', 'failed'}
     new_status = request.data.get('status')
-    if new_status == 'delivered':
+    if new_status is not None and new_status not in allowed_statuses:
+        return Response({'detail': 'Invalid status.'}, status=400)
+
+    if new_status is not None:
+        delivery.status = new_status
+
+    if 'is_completed' in request.data:
+        raw_completed = request.data.get('is_completed')
+        if isinstance(raw_completed, bool):
+            delivery.is_completed = raw_completed
+        elif isinstance(raw_completed, str):
+            lowered = raw_completed.strip().lower()
+            if lowered in {'true', '1', 'yes'}:
+                delivery.is_completed = True
+            elif lowered in {'false', '0', 'no'}:
+                delivery.is_completed = False
+            else:
+                return Response({'detail': 'Invalid is_completed value.'}, status=400)
+        else:
+            return Response({'detail': 'Invalid is_completed value.'}, status=400)
+
+    if delivery.status == 'delivered':
         delivery.is_completed = True
         delivery.delivered_at = timezone.now()
         delivery.order.status = 'delivered'
         delivery.order.save(update_fields=['status'])
 
-    delivery.status = new_status or delivery.status
     delivery.tracking_number = request.data.get('tracking_number', delivery.tracking_number)
     delivery.notes = request.data.get('notes', delivery.notes)
     delivery.save()

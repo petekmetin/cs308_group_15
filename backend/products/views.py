@@ -8,7 +8,7 @@ from .models import Brand, Category, Sneaker, SneakerSize, Wishlist, Review
 from .serializers import (
     BrandSerializer, CategorySerializer,
     SneakerListSerializer, SneakerDetailSerializer,
-    WishlistSerializer, ReviewSerializer,
+    WishlistSerializer, ReviewSerializer, SneakerSizeStockSerializer,
 )
 from config.permissions import IsProductManager, IsSalesManager, IsCustomer
 
@@ -72,7 +72,16 @@ class SneakerListView(generics.ListAPIView):
     ordering = ['-popularity_score']
 
     def get_queryset(self):
-        qs = Sneaker.objects.filter(is_active=True).select_related('brand', 'category')
+        qs = Sneaker.objects.select_related('brand', 'category')
+
+        include_inactive = self.request.query_params.get('include_inactive') == 'true'
+        user = self.request.user
+        if not (
+            include_inactive
+            and getattr(user, 'is_authenticated', False)
+            and getattr(user, 'role', None) == 'product_manager'
+        ):
+            qs = qs.filter(is_active=True)
 
         brand_ids = self.request.query_params.getlist('brand')
         category_ids = self.request.query_params.getlist('category')
@@ -153,6 +162,14 @@ class SneakerDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if not instance.is_active:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SneakerCreateView(generics.CreateAPIView):
     """
@@ -162,6 +179,14 @@ class SneakerCreateView(generics.CreateAPIView):
     queryset = Sneaker.objects.all()
     serializer_class = SneakerDetailSerializer
     permission_classes = [IsProductManager]
+
+
+# Updates stock for a single sneaker-size row.
+class SneakerSizeStockUpdateView(generics.UpdateAPIView):
+    queryset = SneakerSize.objects.select_related('sneaker')
+    serializer_class = SneakerSizeStockSerializer
+    permission_classes = [IsProductManager]
+    http_method_names = ['patch']
 
 
 @api_view(['PATCH'])
@@ -238,15 +263,19 @@ class ReviewListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return Review.objects.filter(
-            sneaker_id=self.kwargs['pk'],
-            status='approved'
-        ).select_related('customer')
+        return (
+            Review.objects.filter(
+                sneaker_id=self.kwargs['pk'],
+                status='approved'
+            )
+            .select_related('customer')
+            .order_by('-created_at')
+        )
 
 
 class ReviewCreateView(generics.CreateAPIView):
     """
-    POST /api/products/sneakers/<pk>/reviews/
+    POST /api/products/sneakers/<pk>/reviews/create/
     Customers only.
     """
     serializer_class = ReviewSerializer
@@ -255,6 +284,19 @@ class ReviewCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         sneaker = Sneaker.objects.get(pk=self.kwargs['pk'])
         serializer.save(customer=self.request.user, sneaker=sneaker)
+
+
+# Lists all pending reviews for product manager moderation.
+class PendingReviewListView(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [IsProductManager]
+
+    def get_queryset(self):
+        return (
+            Review.objects.filter(status='pending')
+            .select_related('customer', 'sneaker')
+            .order_by('-created_at')
+        )
 
 
 @api_view(['PATCH'])

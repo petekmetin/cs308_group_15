@@ -32,6 +32,13 @@ class SneakerSizeSerializer(serializers.ModelSerializer):
         fields = ['id', 'size', 'size_system', 'stock']
 
 
+class SneakerSizeStockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SneakerSize
+        fields = ['id', 'stock']
+        read_only_fields = ['id']
+
+
 class SneakerImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
@@ -65,7 +72,7 @@ class SneakerListSerializer(serializers.ModelSerializer):
             'category_id', 'category_name',
             'sku', 'price', 'discounted_price', 'discount_percentage',
             'is_in_stock', 'total_stock', 'is_featured', 'primary_image',
-            'popularity_score', 'created_at'
+            'is_active', 'popularity_score', 'created_at'
         ]
 
     def get_primary_image(self, obj):
@@ -124,15 +131,16 @@ class SneakerDetailSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    sneaker_name = serializers.CharField(source='sneaker.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
         fields = [
-            'id', 'sneaker', 'customer', 'customer_name',
+            'id', 'sneaker', 'sneaker_name', 'customer', 'customer_name',
             'rating', 'comment', 'status', 'created_at'
         ]
-        read_only_fields = ['id', 'customer', 'status', 'created_at']
+        read_only_fields = ['id', 'sneaker', 'customer', 'status', 'created_at']
 
     def get_customer_name(self, obj):
         return f'{obj.customer.first_name} {obj.customer.last_name}'

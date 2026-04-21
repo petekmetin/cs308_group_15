@@ -19,11 +19,13 @@ cd backend
 ## What `bootstrap_products_catalog` does
 1. Loads shared fixture data from `backend/products/fixtures/products_seed.json`.
 2. Ensures sneaker image file references are valid in your local media storage (creates missing files only if needed).
+3. Seeds deterministic review data (approved/pending/rejected) with seed customer accounts for review moderation testing.
 
 ## When to run again
 - After pulling new changes that include product fixture updates.
 - After resetting/recreating your local database.
 - If product list/search results look empty or inconsistent with teammates.
+- If review moderation tab is empty and you need test data quickly.
 
 ## If someone updates inventory data
 They must regenerate and commit the fixture:
@@ -34,3 +36,11 @@ cd backend
 ```
 
 Then teammates pull and rerun bootstrap.
+
+## Optional: reset seeded review content/statuses
+If seed users already reviewed products and you want to refresh seeded review text/status:
+
+```bash
+cd backend
+./venv/bin/python manage.py seed_sneaker_reviews --reset-seed-reviews
+```

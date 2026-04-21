@@ -18,7 +18,7 @@
 // ============================================================
 // SneakerCard Component
 // ============================================================
-function SneakerCard({ sneaker, onAddToCart, disabled = false }) {
+function SneakerCard({ sneaker, onAddToCart, onViewDetails, disabled = false }) {
   const { name, brand, price, description, accent, image } = sneaker;
   const hasStockInfo = typeof sneaker.is_in_stock === "boolean";
   const isOutOfStock = hasStockInfo && sneaker.is_in_stock === false;
@@ -60,14 +60,23 @@ function SneakerCard({ sneaker, onAddToCart, disabled = false }) {
         <p className="sneaker-description">{description}</p>
         <div className="sneaker-footer">
           <span className="sneaker-price">{formattedPrice}</span>
-          <button
-            className="sneaker-btn"
-            disabled={isButtonDisabled}
-            onClick={() => onAddToCart?.(sneaker)}
-            type="button"
-          >
-            {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-          </button>
+          <div className="sneaker-actions">
+            <button
+              className="sneaker-btn secondary"
+              onClick={() => onViewDetails?.(sneaker)}
+              type="button"
+            >
+              View Details
+            </button>
+            <button
+              className="sneaker-btn"
+              disabled={isButtonDisabled}
+              onClick={() => onAddToCart?.(sneaker)}
+              type="button"
+            >
+              {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

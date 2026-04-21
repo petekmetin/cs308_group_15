@@ -94,6 +94,7 @@ function LoginPage() {
       // Save the user object so we can display the username on HomePage
       // JSON.stringify converts the object to a string for storage
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user_role", user?.role || "");
 
       // Notify App.jsx that the auth token changed so it re-fetches the
       // correct cart for this user. App is outside BrowserRouter and won't

@@ -15,11 +15,13 @@ urlpatterns = [
     path('sizes/options/', views.SneakerSizeOptionsView.as_view(), name='sneaker-size-options'),
     path('sneakers/create/', views.SneakerCreateView.as_view(), name='sneaker-create'),
     path('sneakers/<int:pk>/', views.SneakerDetailView.as_view(), name='sneaker-detail'),
+    path('sneaker-sizes/<int:pk>/', views.SneakerSizeStockUpdateView.as_view(), name='sneaker-size-update'),
     path('sneakers/<int:pk>/set-price/', views.set_sneaker_price, name='sneaker-set-price'),
 
     # Reviews
     path('sneakers/<int:pk>/reviews/', views.ReviewListView.as_view(), name='review-list'),
     path('sneakers/<int:pk>/reviews/create/', views.ReviewCreateView.as_view(), name='review-create'),
+    path('reviews/pending/', views.PendingReviewListView.as_view(), name='review-pending'),
     path('reviews/<int:pk>/moderate/', views.moderate_review, name='review-moderate'),
 
     # Wishlist

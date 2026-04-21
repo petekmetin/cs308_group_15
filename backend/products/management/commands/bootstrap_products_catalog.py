@@ -33,6 +33,11 @@ class Command(BaseCommand):
             default="products/fixtures/products_seed.json",
             help="Fixture path relative to backend manage.py location.",
         )
+        parser.add_argument(
+            "--skip-reviews",
+            action="store_true",
+            help="Skip seeding deterministic review data.",
+        )
 
     def handle(self, *args, **options):
         fixture_path = Path(options["fixture"])
@@ -62,6 +67,12 @@ class Command(BaseCommand):
                 f"Bootstrap complete. Existing image files: {existing_files}, created missing files: {created_files}"
             )
         )
+
+        if options.get("skip_reviews"):
+            self.stdout.write("Skipping seed_sneaker_reviews (--skip-reviews).")
+        else:
+            self.stdout.write("Seeding review data for moderation/testing...")
+            call_command("seed_sneaker_reviews")
 
     def _build_image_bytes(self, seed: int) -> bytes:
         if Image is None:

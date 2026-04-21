@@ -117,6 +117,22 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'customer', 'total_price', 'created_at', 'updated_at']
 
 
+class DeliveryOrderItemSerializer(serializers.ModelSerializer):
+    sneaker_name = serializers.CharField(source='sneaker.name', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'sneaker', 'sneaker_name', 'quantity']
+
+
+class DeliveryOrderSerializer(serializers.ModelSerializer):
+    items = DeliveryOrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'customer', 'total_price', 'items']
+
+
 class InvoiceSerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only=True)
 
@@ -126,10 +142,13 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 
 class DeliverySerializer(serializers.ModelSerializer):
+    order = DeliveryOrderSerializer(read_only=True)
+    order_id = serializers.IntegerField(source='order.id', read_only=True)
+
     class Meta:
         model = Delivery
         fields = [
-            'id', 'order', 'status', 'tracking_number',
+            'id', 'order', 'order_id', 'status', 'tracking_number',
             'delivery_address', 'is_completed',
             'dispatched_at', 'delivered_at', 'notes'
         ]

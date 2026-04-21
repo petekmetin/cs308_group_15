@@ -80,6 +80,7 @@ function SignupPage() {
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user_role", user?.role || "");
 
       // Notify App.jsx that the auth token changed so it loads this user's cart.
       window.dispatchEvent(new Event("auth-changed"));

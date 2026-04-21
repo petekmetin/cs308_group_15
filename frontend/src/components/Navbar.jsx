@@ -30,6 +30,7 @@ import api from "../api";
 // ============================================================
 function Navbar({ user, cartCount = 0 }) {
   const navigate = useNavigate();
+  const userRole = localStorage.getItem("user_role") || user?.role || "";
 
   // ── handleLogout ───────────────────────────────────────────
   // Called when the user clicks the "Sign Out" button.
@@ -56,6 +57,7 @@ function Navbar({ user, cartCount = 0 }) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user");
+      localStorage.removeItem("user_role");
 
       // Notify App.jsx that the token is gone so it clears the cart state.
       // App is outside BrowserRouter and won't re-render on navigation alone.
@@ -76,6 +78,12 @@ function Navbar({ user, cartCount = 0 }) {
 
       {/* Right side: username display + sign-out button */}
       <div className="nav-right">
+        {userRole === "product_manager" ? (
+          <Link to="/manager/dashboard" className="nav-manager-link">
+            Manager Dashboard
+          </Link>
+        ) : null}
+
         <Link to="/cart" className="nav-cart-link">
           Cart
           {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
