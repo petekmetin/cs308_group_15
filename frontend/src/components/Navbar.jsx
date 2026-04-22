@@ -89,6 +89,10 @@ function Navbar({ user, cartCount = 0 }) {
           {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
         </Link>
 
+        <Link to="/orders" className="nav-cart-link">
+          Orders
+        </Link>
+
         {/*
           Optional chaining (user?.username): safely accesses .username
           even when user is null (while the API call is in progress).

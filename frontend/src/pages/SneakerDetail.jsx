@@ -26,10 +26,21 @@ function SneakerDetail({ cartCount = 0 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reviewsError, setReviewsError] = useState("");
+  const [reviewsOpen, setReviewsOpen] = useState(true);
 
   const accessToken = localStorage.getItem("access_token") || "";
   const userRole = useMemo(() => getStoredRole(), [user]);
   const canWriteReview = Boolean(accessToken) && userRole === "customer";
+
+  const refreshReviews = async () => {
+    try {
+      const payload = await fetchJson(`/api/products/sneakers/${id}/reviews/`);
+      setReviews(normalizeList(payload));
+      setReviewsError("");
+    } catch (err) {
+      setReviewsError(err.message || "Could not refresh reviews.");
+    }
+  };
 
   useEffect(() => {
     if (!accessToken) {
@@ -115,30 +126,61 @@ function SneakerDetail({ cartCount = 0 }) {
         </section>
 
         <section className="review-list-section">
-          <h2>Approved Reviews</h2>
-          {reviewsError ? <p className="review-error">{reviewsError}</p> : null}
-          {reviews.length === 0 ? (
-            <p className="manager-empty">No approved reviews yet.</p>
-          ) : (
-            <div className="review-list">
-              {reviews.map((review) => (
-                <article key={review.id} className="review-item">
-                  <div className="review-item-header">
-                    <p>{review.customer_name || `Customer #${review.customer}`}</p>
-                    <span>{renderStars(review.rating)}</span>
-                  </div>
-                  <p>{review.comment}</p>
-                  <p className="review-date">{new Date(review.created_at).toLocaleString()}</p>
-                </article>
-              ))}
-            </div>
-          )}
+          <button
+            type="button"
+            className="review-list-toggle"
+            onClick={() => setReviewsOpen((prev) => !prev)}
+            aria-expanded={reviewsOpen}
+          >
+            <span>
+              Customer Reviews{" "}
+              <span className="review-count-pill">{reviews.length}</span>
+            </span>
+            <span className={`review-chevron ${reviewsOpen ? "open" : ""}`} aria-hidden="true">
+              ▾
+            </span>
+          </button>
+
+          {reviewsOpen ? (
+            <>
+              {reviewsError ? <p className="review-error">{reviewsError}</p> : null}
+              {reviews.length === 0 ? (
+                <p className="manager-empty">No reviews yet. Be the first to share yours!</p>
+              ) : (
+                <div className="review-list review-list-scroll">
+                  {reviews.map((review) => {
+                    const author =
+                      (review.customer_name && review.customer_name.trim()) ||
+                      `Customer #${review.customer}`;
+                    return (
+                      <article key={review.id} className="review-item">
+                        <div className="review-item-header">
+                          <p>
+                            <strong>{author}</strong>
+                          </p>
+                          <span>{renderStars(review.rating)}</span>
+                        </div>
+                        <p>{review.comment}</p>
+                        <p className="review-date">
+                          {new Date(review.created_at).toLocaleString()}
+                        </p>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : null}
         </section>
 
         {canWriteReview ? (
           <section className="review-submit-section">
             <h2>Write a Review</h2>
-            <ReviewSubmissionForm sneakerId={id} accessToken={accessToken} />
+            <ReviewSubmissionForm
+              sneakerId={id}
+              accessToken={accessToken}
+              onSubmitted={refreshReviews}
+            />
           </section>
         ) : null}
       </main>

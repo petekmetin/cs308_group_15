@@ -2,12 +2,12 @@ import { useState } from "react";
 
 import { fetchJson } from "../utils/http";
 
-function ReviewSubmissionForm({ sneakerId, accessToken }) {
+function ReviewSubmissionForm({ sneakerId, accessToken, onSubmitted }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [successAt, setSuccessAt] = useState(0);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -31,7 +31,12 @@ function ReviewSubmissionForm({ sneakerId, accessToken }) {
           comment: comment.trim(),
         },
       });
-      setSubmitted(true);
+      setRating(0);
+      setComment("");
+      setSuccessAt(Date.now());
+      if (typeof onSubmitted === "function") {
+        onSubmitted();
+      }
     } catch (err) {
       setError(err.message || "Could not submit your review.");
     } finally {
@@ -39,16 +44,13 @@ function ReviewSubmissionForm({ sneakerId, accessToken }) {
     }
   };
 
-  if (submitted) {
-    return (
-      <p className="review-success">
-        Your review has been submitted and is pending approval.
-      </p>
-    );
-  }
-
   return (
     <form className="review-form" onSubmit={handleSubmit}>
+      {successAt ? (
+        <p className="review-success" key={successAt}>
+          Thanks for your review! It's now live below.
+        </p>
+      ) : null}
       <label className="review-form-label">Your Rating</label>
       <div className="review-stars-picker">
         {[1, 2, 3, 4, 5].map((star) => (

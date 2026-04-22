@@ -42,6 +42,7 @@ import LoginPage  from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import HomePage   from "./pages/HomePage";
 import CartPage   from "./pages/CartPage";
+import OrdersPage from "./pages/OrdersPage";
 import ProductManagerDashboard from "./pages/ProductManagerDashboard";
 import SneakerDetail from "./pages/SneakerDetail";
 
@@ -235,6 +236,15 @@ function App() {
               onClearCart={clearCart}
               cartCount={cartCount}
             />
+          }
+        />
+
+        <Route
+          path="/orders"
+          element={
+            <PrivateRoute>
+              <OrdersPage cartCount={cartCount} />
+            </PrivateRoute>
           }
         />
 

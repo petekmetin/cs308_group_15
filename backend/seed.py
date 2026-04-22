@@ -186,8 +186,11 @@ for data in sneakers_data:
     for size_val, system, stock in sizes_data:
         SneakerSize.objects.create(sneaker=sneaker, size=size_val, size_system=system, stock=stock)
 
-    for url, is_primary in images_data:
-        SneakerImage.objects.create(sneaker=sneaker, image_url=url, is_primary=is_primary)
+    # Note: intentionally not seeding SneakerImage rows. The frontend has a
+    # tasteful fallback for products without images and we don't want to ship
+    # hot-linked photos that might not match the actual product.
+    _ = images_data  # retained in sneakers_data for future use
+    _ = SneakerImage  # keep import referenced for migrations/admin scripts
 
     print(f'  Created sneaker: {sneaker.brand.name} {sneaker.name}')
 

@@ -68,7 +68,10 @@ class SneakerListView(generics.ListAPIView):
     serializer_class = SneakerListSerializer
     permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
+    # DRF SearchFilter defaults to case-insensitive substring (__icontains).
+    # Including brand__name and category__name means typing "n" matches Nike,
+    # "a" matches Adidas, "run" matches Running category, etc.
+    search_fields = ['name', 'description', 'brand__name', 'category__name']
     ordering_fields = ['price', 'popularity_score']
     ordering = ['-popularity_score']
 
@@ -283,14 +286,19 @@ class ReviewListView(generics.ListAPIView):
 class ReviewCreateView(generics.CreateAPIView):
     """
     POST /api/products/sneakers/<pk>/reviews/create/
-    Customers only.
+    Customers only. Reviews are auto-approved and appear on the product
+    page immediately (no manager moderation step).
     """
     serializer_class = ReviewSerializer
     permission_classes = [IsCustomer]
 
     def perform_create(self, serializer):
         sneaker = Sneaker.objects.get(pk=self.kwargs['pk'])
-        serializer.save(customer=self.request.user, sneaker=sneaker)
+        serializer.save(
+            customer=self.request.user,
+            sneaker=sneaker,
+            status='approved',
+        )
 
 
 # Lists all pending reviews for product manager moderation.
