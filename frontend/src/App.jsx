@@ -26,7 +26,7 @@ import { useEffect, useState } from "react";
 // Routes         — container that holds all Route definitions
 // Route          — maps a URL path to a component
 // Navigate       — programmatically redirects (like a redirect tag)
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 
 import api from "./api";
 import {
@@ -86,6 +86,7 @@ function App() {
   const [authToken, setAuthToken] = useState(() =>
     localStorage.getItem("access_token")
   );
+  const [addToast, setAddToast] = useState(null);
 
   // Initialise from guest cart when not logged in.
   const [cartItems, setCartItems] = useState(() =>
@@ -101,7 +102,9 @@ function App() {
   }, []);
 
   const normalizeCart = (cart) =>
-    (cart?.items ?? []).map((item) => ({
+    [...(cart?.items ?? [])]
+      .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+      .map((item) => ({
       id: item.id,
       slug: item.product_slug,
       name: item.product_name,
@@ -109,9 +112,37 @@ function App() {
       description: item.description,
       accent: item.accent,
       image: item.image_url,
+      size_id: item.size_id,
+      size: item.size,
+      size_system: item.size_system,
+      product_id: Number(String(item.product_slug || "").replace("sneaker-", "")) || null,
       price: Number(item.unit_price),
       quantity: item.quantity,
-    }));
+      }));
+
+  const clearStaleAuth = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("user_role");
+    window.dispatchEvent(new Event("auth-changed"));
+  };
+
+  const showAddToast = (sneaker, sizeOption) => {
+    const sizeLabel = `${sizeOption.size_system} ${sizeOption.size}`;
+    setAddToast({
+      key: Date.now(),
+      message: `${sneaker.name} (${sizeLabel}) added to cart.`,
+    });
+  };
+
+  useEffect(() => {
+    if (!addToast) {
+      return undefined;
+    }
+    const timer = setTimeout(() => setAddToast(null), 6000);
+    return () => clearTimeout(timer);
+  }, [addToast]);
 
   useEffect(() => {
     if (!authToken) {
@@ -132,29 +163,68 @@ function App() {
     load();
   }, [authToken]);
 
-  const addToCart = async (sneaker) => {
+  const addToCart = async (sneaker, sizeOption) => {
+    if (!sizeOption?.id) {
+      throw new Error("Please select a size before adding to cart.");
+    }
+
     if (!authToken) {
-      setCartItems(addToGuestCart(sneaker));
+      const nextCart = addToGuestCart(sneaker, sizeOption);
+      setCartItems(nextCart);
+      showAddToast(sneaker, sizeOption);
       return;
     }
     const productId   = sneaker.product_id ?? sneaker.id;
     const productSlug = sneaker.slug || (productId ? `sneaker-${productId}` : "");
-    const response    = await api.post("/api/cart/items/", {
-      product_id:   productId,
-      product_slug: productSlug,
-      product_name: sneaker.name,
-      brand:        sneaker.brand,
-      description:  sneaker.description,
-      accent:       sneaker.accent ?? "",
-      image_url:    sneaker.image  ?? "",
-      unit_price:   sneaker.price,
-      quantity:     1,
-    });
-    setCartItems(normalizeCart(response.data));
+    try {
+      const response = await api.post("/api/cart/items/", {
+        product_id:   productId,
+        size_id:      sizeOption.id,
+        product_slug: productSlug,
+        product_name: sneaker.name,
+        brand:        sneaker.brand,
+        description:  sneaker.description,
+        accent:       sneaker.accent ?? "",
+        image_url:    sneaker.image  ?? "",
+        unit_price:   sneaker.price,
+        quantity:     1,
+      });
+      setCartItems(normalizeCart(response.data));
+      showAddToast(sneaker, sizeOption);
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        clearStaleAuth();
+        const nextCart = addToGuestCart(sneaker, sizeOption);
+        setCartItems(nextCart);
+        showAddToast(sneaker, sizeOption);
+        return;
+      }
+      throw error;
+    }
   };
 
   const updateCartQuantity = async (id, quantity) => {
     if (!authToken) {
+      const currentItem = cartItems.find((item) => item.id === id);
+      if (currentItem && quantity > currentItem.quantity) {
+        const sneakerId =
+          currentItem.product_id ??
+          Number(String(currentItem.slug || "").replace("sneaker-", ""));
+        const response = await api.get(`/api/products/sneakers/${sneakerId}/`);
+        const selectedSize = (response.data?.sizes || []).find(
+          (size) => size.id === currentItem.size_id
+        );
+        const stock = Number(selectedSize?.stock ?? 0);
+
+        if (!selectedSize) {
+          throw new Error("The selected size is no longer available.");
+        }
+        if (quantity > stock) {
+          throw new Error(
+            `Only ${stock} left for size ${selectedSize.size_system} ${selectedSize.size}.`
+          );
+        }
+      }
       setCartItems(updateGuestCartItem(id, quantity));
       return;
     }
@@ -255,6 +325,24 @@ function App() {
         */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {addToast ? (
+        <div className="cart-action-toast" key={addToast.key}>
+          <p>{addToast.message}</p>
+          <div className="cart-action-toast-actions">
+            <Link to="/cart" className="landing-primary-btn" onClick={() => setAddToast(null)}>
+              Go to Cart
+            </Link>
+            <button
+              type="button"
+              className="landing-secondary-btn"
+              onClick={() => setAddToast(null)}
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      ) : null}
     </BrowserRouter>
   );
 }

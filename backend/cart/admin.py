@@ -16,6 +16,5 @@ class CartAdmin(admin.ModelAdmin):
 
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
-    list_display = ('id', 'product_slug', 'cart', 'quantity', 'unit_price')
-    list_filter = ('brand',)
-
+    list_display = ('id', 'product_slug', 'sneaker', 'size', 'cart', 'quantity', 'unit_price')
+    list_filter = ('brand', 'size__size_system')

@@ -12,20 +12,23 @@ From project root:
 
 ```bash
 cd backend
-./venv/bin/python manage.py migrate
-./venv/bin/python manage.py bootstrap_products_catalog
+./venv/bin/python manage.py bootstrap_products_catalog --with-migrate
 ```
 
 ## What `bootstrap_products_catalog` does
 1. Loads shared fixture data from `backend/products/fixtures/products_seed.json`.
-2. Ensures sneaker image file references are valid in your local media storage (creates missing files only if needed).
-3. Seeds deterministic review data (approved/pending/rejected) with seed customer accounts for review moderation testing.
+2. Normalizes seeded sneaker sizes to **EU** labels (US support remains in code, but shared seed data is standardized to EU on bootstrap).
+3. Ensures sneaker image file references are valid in your local media storage (creates missing files only if needed).
+4. Verifies catalog integrity after load (brands/categories/sneakers/sizes/images linked correctly).
+5. Seeds deterministic review data (approved/pending/rejected) with seed customer accounts for review moderation testing.
 
 ## When to run again
 - After pulling new changes that include product fixture updates.
 - After resetting/recreating your local database.
 - If product list/search results look empty or inconsistent with teammates.
 - If review moderation tab is empty and you need test data quickly.
+
+`bootstrap_products_catalog` is idempotent and safe to rerun.
 
 ## If someone updates inventory data
 They must regenerate and commit the fixture:

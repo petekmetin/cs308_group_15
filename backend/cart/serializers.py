@@ -4,6 +4,10 @@ from .models import Cart, CartItem
 
 
 class CartItemSerializer(serializers.ModelSerializer):
+    size_id = serializers.IntegerField(source='size.id', read_only=True)
+    size = serializers.CharField(source='size.size', read_only=True)
+    size_system = serializers.CharField(source='size.size_system', read_only=True)
+
     class Meta:
         model = CartItem
         fields = [
@@ -14,6 +18,9 @@ class CartItemSerializer(serializers.ModelSerializer):
             'description',
             'accent',
             'image_url',
+            'size_id',
+            'size',
+            'size_system',
             'unit_price',
             'quantity',
         ]
@@ -22,6 +29,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 class AddCartItemSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(min_value=1)
+    size_id = serializers.IntegerField(min_value=1)
     product_slug = serializers.SlugField(max_length=120, required=False, allow_blank=True)
     product_name = serializers.CharField(max_length=255)
     brand = serializers.CharField(max_length=120)

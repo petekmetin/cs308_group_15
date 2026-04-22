@@ -48,6 +48,32 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
     setStep("card");
   };
 
+  const handleQuantityChange = async (item, nextQuantity) => {
+    setError("");
+    try {
+      await onUpdateQuantity(item.id, nextQuantity);
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Could not update cart quantity."
+      );
+    }
+  };
+
+  const handleRemoveItem = async (itemId) => {
+    setError("");
+    try {
+      await onRemoveFromCart(itemId);
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Could not remove this item from cart."
+      );
+    }
+  };
+
   const handleConfirmOrder = async (e) => {
     e.preventDefault();
     setError("");
@@ -69,21 +95,35 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
       // ── 2) Build order items (resolve size per sneaker) ──────
       const itemPayloads = await Promise.all(
         cartItems.map(async (item) => {
+          if (!item.size_id) {
+            throw new Error(
+              `Size is required for \"${item.name}\". Remove and re-add the item.`
+            );
+          }
+
           const sneakerId = Number(item.slug.replace("sneaker-", ""));
           const { data: sneaker } = await api.get(
             `/api/products/sneakers/${sneakerId}/`
           );
-          const validSize = (sneaker.sizes || []).find(
-            (s) => s.stock >= item.quantity
+          const selectedSize = (sneaker.sizes || []).find(
+            (s) => s.id === item.size_id
           );
-          if (!validSize) {
+
+          if (!selectedSize) {
             throw new Error(
-              `No size in stock for "${item.name}". Remove it and try again.`
+              `Selected size is no longer available for "${item.name}".`
             );
           }
+
+          if (selectedSize.stock < item.quantity) {
+            throw new Error(
+              `Insufficient stock for "${item.name}" size ${selectedSize.size_system} ${selectedSize.size}.`
+            );
+          }
+
           return {
             sneaker_id: sneakerId,
-            size_id: validSize.id,
+            size_id: item.size_id,
             quantity: item.quantity,
           };
         })
@@ -157,6 +197,8 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
           </div>
         </section>
 
+        {error ? <p className="catalog-error">{error}</p> : null}
+
         {/* ── Step 1: Delivery address ───────────────────────────────── */}
         {step === "address" && (
           <section style={{ maxWidth: "480px", margin: "0 auto 2rem", padding: "0 1rem" }}>
@@ -165,7 +207,6 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
             <p className="section-note" style={{ marginBottom: "1rem" }}>
               Where should we send your order?
             </p>
-            {error && <p style={{ color: "#e74c3c", marginBottom: "0.75rem" }}>{error}</p>}
             <form
               onSubmit={handleAddressSubmit}
               style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
@@ -215,7 +256,6 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
               Amount due: <strong>{fmtCurrency(total)}</strong>. This is a mock bank for
               testing — we'll only store the last four digits of your card.
             </p>
-            {error && <p style={{ color: "#e74c3c", marginBottom: "0.75rem" }}>{error}</p>}
             <form
               onSubmit={handleConfirmOrder}
               style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
@@ -333,6 +373,11 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                   <span className="sneaker-brand">{item.brand}</span>
                   <h2 className="sneaker-name">{item.name}</h2>
                   <p className="sneaker-description">{item.description}</p>
+                  {item.size_id ? (
+                    <p className="sneaker-description">
+                      Size: {item.size_system} {item.size}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="cart-item-actions">
                   <div className="cart-qty-controls">
@@ -341,8 +386,8 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                       className="cart-qty-btn"
                       onClick={() =>
                         item.quantity === 1
-                          ? onRemoveFromCart(item.id)
-                          : onUpdateQuantity(item.id, item.quantity - 1)
+                          ? handleRemoveItem(item.id)
+                          : handleQuantityChange(item, item.quantity - 1)
                       }
                       aria-label={`Decrease quantity of ${item.name}`}
                     >
@@ -352,7 +397,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                     <button
                       type="button"
                       className="cart-qty-btn"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => handleQuantityChange(item, item.quantity + 1)}
                       aria-label={`Increase quantity of ${item.name}`}
                     >
                       +
@@ -362,7 +407,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                   <button
                     type="button"
                     className="cart-remove-btn"
-                    onClick={() => onRemoveFromCart(item.id)}
+                    onClick={() => handleRemoveItem(item.id)}
                   >
                     Remove
                   </button>

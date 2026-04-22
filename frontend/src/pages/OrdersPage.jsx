@@ -264,7 +264,11 @@ function OrdersPage({ cartCount }) {
                               {name}
                             </div>
                             <div style={{ fontSize: "0.75rem", color: "#aaa" }}>
-                              Qty {item.quantity} &nbsp;·&nbsp; {fmtCurrency(item.unit_price)} each
+                              Qty {item.quantity}
+                              {item.size_system && item.size_value
+                                ? ` · Size ${item.size_system} ${item.size_value}`
+                                : ""}
+                              &nbsp;·&nbsp; {fmtCurrency(item.unit_price)} each
                             </div>
                           </div>
                           <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>

@@ -8,10 +8,22 @@ from products.models import Sneaker, SneakerSize
 class OrderItemSerializer(serializers.ModelSerializer):
     sneaker_detail = SneakerListSerializer(source='sneaker', read_only=True)
     subtotal = serializers.ReadOnlyField()
+    size_value = serializers.CharField(source='size.size', read_only=True)
+    size_system = serializers.CharField(source='size.size_system', read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'sneaker', 'sneaker_detail', 'size', 'quantity', 'unit_price', 'subtotal']
+        fields = [
+            'id',
+            'sneaker',
+            'sneaker_detail',
+            'size',
+            'size_value',
+            'size_system',
+            'quantity',
+            'unit_price',
+            'subtotal',
+        ]
         read_only_fields = ['unit_price']
 
 

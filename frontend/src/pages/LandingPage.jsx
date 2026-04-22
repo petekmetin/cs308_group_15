@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import api from "../api";
 import SneakerCard from "../components/SneakerCard";
 import ShoeSlider from "../components/ShoeSlider";
+import SizePickerDialog from "../components/SizePickerDialog";
 import { mapSneakerFromApi, normalizePaginatedList } from "../utils/sneakers";
 
 function LandingPage({ onAddToCart, cartCount = 0 }) {
-  const navigate = useNavigate();
   const [featuredSneakers, setFeaturedSneakers] = useState([]);
   const [loadingSneakers, setLoadingSneakers] = useState(true);
+  const [sizePickerSneaker, setSizePickerSneaker] = useState(null);
+  const [cartError, setCartError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -50,8 +52,28 @@ function LandingPage({ onAddToCart, cartCount = 0 }) {
   }, []);
 
   const handleAddToCart = async (sneaker) => {
-    await onAddToCart?.(sneaker);
-    navigate("/cart");
+    if (sneaker.is_in_stock === false) {
+      return;
+    }
+    setCartError("");
+    setSizePickerSneaker(sneaker);
+  };
+
+  const handleConfirmSize = async (sizeOption) => {
+    if (!sizePickerSneaker) {
+      return;
+    }
+    try {
+      await onAddToCart?.(sizePickerSneaker, sizeOption);
+      setSizePickerSneaker(null);
+    } catch (error) {
+      setCartError(
+        error.response?.data?.detail ||
+          error.message ||
+          "Could not add this sneaker to your cart."
+      );
+      throw error;
+    }
   };
 
   return (
@@ -108,15 +130,18 @@ function LandingPage({ onAddToCart, cartCount = 0 }) {
           {loadingSneakers ? (
             <p className="catalog-loading">Loading featured sneakers...</p>
           ) : featuredSneakers.length ? (
-            <div className="sneaker-grid">
-              {featuredSneakers.map((sneaker) => (
-                <SneakerCard
-                  key={sneaker.id}
-                  sneaker={sneaker}
-                  onAddToCart={handleAddToCart}
-                />
-              ))}
-            </div>
+            <>
+              {cartError ? <p className="catalog-error">{cartError}</p> : null}
+              <div className="sneaker-grid">
+                {featuredSneakers.map((sneaker) => (
+                  <SneakerCard
+                    key={sneaker.id}
+                    sneaker={sneaker}
+                    onAddToCart={handleAddToCart}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="catalog-empty">
               <h3>No featured sneakers available yet</h3>
@@ -125,6 +150,13 @@ function LandingPage({ onAddToCart, cartCount = 0 }) {
           )}
         </section>
       </main>
+
+      <SizePickerDialog
+        sneaker={sizePickerSneaker}
+        open={Boolean(sizePickerSneaker)}
+        onClose={() => setSizePickerSneaker(null)}
+        onConfirm={handleConfirmSize}
+      />
     </div>
   );
 }

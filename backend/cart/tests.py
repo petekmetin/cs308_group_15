@@ -33,11 +33,17 @@ class CartAddItemStockValidationTests(APITestCase):
             popularity_score=90,
             is_active=True,
         )
-        SneakerSize.objects.create(
+        self.in_stock_us10 = SneakerSize.objects.create(
             sneaker=self.in_stock,
             size_system='US',
             size='10',
             stock=4,
+        )
+        self.in_stock_us9 = SneakerSize.objects.create(
+            sneaker=self.in_stock,
+            size_system='US',
+            size='9',
+            stock=2,
         )
 
         self.out_of_stock = Sneaker.objects.create(
@@ -53,16 +59,17 @@ class CartAddItemStockValidationTests(APITestCase):
             popularity_score=70,
             is_active=True,
         )
-        SneakerSize.objects.create(
+        self.out_of_stock_us10 = SneakerSize.objects.create(
             sneaker=self.out_of_stock,
             size_system='US',
             size='10',
             stock=0,
         )
 
-    def _payload_for(self, sneaker):
+    def _payload_for(self, sneaker, size, quantity=1):
         return {
             'product_id': sneaker.id,
+            'size_id': size.id,
             'product_slug': f'sneaker-{sneaker.id}',
             'product_name': sneaker.name,
             'brand': sneaker.brand.name,
@@ -70,19 +77,106 @@ class CartAddItemStockValidationTests(APITestCase):
             'accent': '',
             'image_url': '',
             'unit_price': str(sneaker.price),
-            'quantity': 1,
+            'quantity': quantity,
         }
 
     def test_out_of_stock_product_cannot_be_added(self):
-        response = self.client.post('/api/cart/items/', self._payload_for(self.out_of_stock), format='json')
+        response = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.out_of_stock, self.out_of_stock_us10),
+            format='json',
+        )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data['detail'], 'This product is out of stock.')
 
     def test_in_stock_product_can_be_added(self):
-        response = self.client.post('/api/cart/items/', self._payload_for(self.in_stock), format='json')
+        response = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us10),
+            format='json',
+        )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['item_count'], 1)
-        self.assertEqual(response.data['items'][0]['product_name'], self.in_stock.name)
+        item = response.data['items'][0]
+        self.assertEqual(item['product_name'], self.in_stock.name)
+        self.assertEqual(item['size_id'], self.in_stock_us10.id)
+        self.assertEqual(item['size'], self.in_stock_us10.size)
+        self.assertEqual(item['size_system'], self.in_stock_us10.size_system)
+
+    def test_size_id_is_required(self):
+        payload = self._payload_for(self.in_stock, self.in_stock_us10)
+        payload.pop('size_id')
+        response = self.client.post('/api/cart/items/', payload, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('size_id', response.data)
+
+    def test_size_must_belong_to_the_requested_sneaker(self):
+        response = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.out_of_stock_us10),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['detail'], 'Selected size does not belong to this product.')
+
+    def test_add_rejects_quantity_above_selected_size_stock(self):
+        response = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us10, quantity=5),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['detail'], 'Only 4 left for size US 10.')
+
+    def test_add_existing_item_rejects_overflowing_quantity(self):
+        first = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us10, quantity=3),
+            format='json',
+        )
+        self.assertEqual(first.status_code, 201)
+
+        second = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us10, quantity=2),
+            format='json',
+        )
+        self.assertEqual(second.status_code, 400)
+        self.assertEqual(second.data['detail'], 'Only 4 left for size US 10.')
+
+    def test_same_sneaker_with_different_sizes_creates_two_cart_lines(self):
+        first = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us10),
+            format='json',
+        )
+        self.assertEqual(first.status_code, 201)
+
+        second = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us9),
+            format='json',
+        )
+        self.assertEqual(second.status_code, 201)
+        self.assertEqual(second.data['item_count'], 2)
+        self.assertEqual(len(second.data['items']), 2)
+
+    def test_update_rejects_quantity_above_size_stock(self):
+        response = self.client.post(
+            '/api/cart/items/',
+            self._payload_for(self.in_stock, self.in_stock_us10),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        item_id = response.data['items'][0]['id']
+
+        update = self.client.patch(
+            f'/api/cart/items/{item_id}/',
+            {'quantity': 9},
+            format='json',
+        )
+        self.assertEqual(update.status_code, 400)
+        self.assertEqual(update.data['detail'], 'Only 4 left for size US 10.')
 
 
 class CartClearTests(APITestCase):
@@ -107,15 +201,39 @@ class CartClearTests(APITestCase):
             serial_number='SER-CLR-001',
             description='Test sneaker.', price='100.00', is_active=True,
         )
+        size_a = SneakerSize.objects.create(
+            sneaker=sneaker,
+            size_system='US',
+            size='9',
+            stock=10,
+        )
+        size_b = SneakerSize.objects.create(
+            sneaker=sneaker,
+            size_system='US',
+            size='10',
+            stock=10,
+        )
         # Pre-load a cart with two items
         cart = Cart.objects.create(user=self.customer)
         CartItem.objects.create(
-            cart=cart, product_slug='sneaker-1', product_name='Shoe A',
-            brand='Brand A', unit_price='100.00', quantity=2,
+            cart=cart,
+            sneaker=sneaker,
+            size=size_a,
+            product_slug='sneaker-1',
+            product_name='Shoe A',
+            brand='Brand A',
+            unit_price='100.00',
+            quantity=2,
         )
         CartItem.objects.create(
-            cart=cart, product_slug='sneaker-2', product_name='Shoe B',
-            brand='Brand B', unit_price='80.00', quantity=1,
+            cart=cart,
+            sneaker=sneaker,
+            size=size_b,
+            product_slug='sneaker-2',
+            product_name='Shoe B',
+            brand='Brand B',
+            unit_price='80.00',
+            quantity=1,
         )
         self.client.force_authenticate(self.customer)
 
@@ -144,9 +262,35 @@ class CartClearTests(APITestCase):
             first_name='O', last_name='C', password='StrongPass123!',
         )
         other_cart = Cart.objects.create(user=other)
+        other_brand = Brand.objects.create(name='Other Brand', slug='other-brand')
+        other_category = Category.objects.create(name='Other Cat', slug='other-cat')
+        other_sneaker = Sneaker.objects.create(
+            brand=other_brand,
+            category=other_category,
+            name='Other Shoe',
+            model_number='OTH-001',
+            colorway='Black',
+            sku='SKU-OTH-001',
+            serial_number='SER-OTH-001',
+            description='Other test sneaker.',
+            price='50.00',
+            is_active=True,
+        )
+        other_size = SneakerSize.objects.create(
+            sneaker=other_sneaker,
+            size_system='US',
+            size='8',
+            stock=4,
+        )
         CartItem.objects.create(
-            cart=other_cart, product_slug='sneaker-99', product_name='Other Shoe',
-            brand='Other Brand', unit_price='50.00', quantity=1,
+            cart=other_cart,
+            sneaker=other_sneaker,
+            size=other_size,
+            product_slug='sneaker-99',
+            product_name='Other Shoe',
+            brand='Other Brand',
+            unit_price='50.00',
+            quantity=1,
         )
 
         self.client.post('/api/cart/clear/')

@@ -11,7 +11,7 @@ from .serializers import (
     CartSerializer,
     UpdateCartItemSerializer,
 )
-from products.models import Sneaker
+from products.models import Sneaker, SneakerSize
 
 
 def build_media_url(request, file_field):
@@ -26,6 +26,14 @@ def build_media_url(request, file_field):
 def get_user_cart(user):
     cart, _ = Cart.objects.get_or_create(user=user)
     return cart
+
+
+def get_active_sneaker(product_id):
+    return (
+        Sneaker.objects.select_related('brand')
+        .prefetch_related('sizes', 'images')
+        .get(pk=product_id, is_active=True)
+    )
 
 
 @api_view(['GET'])
@@ -45,6 +53,7 @@ def add_cart_item(request):
     data = serializer.validated_data
     quantity = data.get('quantity', 1)
     product_id = data['product_id']
+    size_id = data['size_id']
 
     product_name = data['product_name']
     brand = data['brand']
@@ -54,11 +63,7 @@ def add_cart_item(request):
     unit_price = Decimal(data['unit_price'])
 
     try:
-        sneaker = (
-            Sneaker.objects.select_related('brand')
-            .prefetch_related('sizes', 'images')
-            .get(pk=product_id, is_active=True)
-        )
+        sneaker = get_active_sneaker(product_id)
     except Sneaker.DoesNotExist:
         return Response(
             {'detail': 'Product not found.'},
@@ -77,6 +82,32 @@ def add_cart_item(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    try:
+        size = SneakerSize.objects.get(pk=size_id)
+    except SneakerSize.DoesNotExist:
+        return Response(
+            {'detail': 'Selected size was not found.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if size.sneaker_id != sneaker.id:
+        return Response(
+            {'detail': 'Selected size does not belong to this product.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if size.stock <= 0:
+        return Response(
+            {'detail': 'Selected size is out of stock.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if quantity > size.stock:
+        return Response(
+            {'detail': f'Only {size.stock} left for size {size.size_system} {size.size}.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     primary_image = sneaker.images.filter(is_primary=True).first() or sneaker.images.first()
     effective_price = sneaker.discounted_price if sneaker.discounted_price is not None else sneaker.price
 
@@ -89,8 +120,10 @@ def add_cart_item(request):
 
     item, created = CartItem.objects.get_or_create(
         cart=cart,
-        product_slug=product_slug,
+        sneaker=sneaker,
+        size=size,
         defaults={
+            'product_slug': product_slug,
             'product_name': product_name,
             'brand': brand,
             'description': description,
@@ -102,13 +135,22 @@ def add_cart_item(request):
     )
 
     if not created:
-        item.quantity += quantity
+        next_quantity = item.quantity + quantity
+        if next_quantity > size.stock:
+            return Response(
+                {'detail': f'Only {size.stock} left for size {size.size_system} {size.size}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        item.quantity = next_quantity
+        item.product_slug = product_slug
         item.product_name = product_name
         item.brand = brand
         item.description = description
         item.accent = accent
         item.image_url = image_url
         item.unit_price = unit_price
+        item.sneaker = sneaker
+        item.size = size
         item.save()
 
     cart.refresh_from_db()
@@ -127,7 +169,19 @@ def update_cart_item(request, item_id):
     except CartItem.DoesNotExist:
         return Response({'detail': 'Cart item not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-    item.quantity = serializer.validated_data['quantity']
+    new_quantity = serializer.validated_data['quantity']
+    stock = item.size.stock if item.size else 0
+    if new_quantity > stock:
+        if item.size:
+            detail = f'Only {stock} left for size {item.size.size_system} {item.size.size}.'
+        else:
+            detail = 'This cart item no longer has a valid size selection.'
+        return Response(
+            {'detail': detail},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    item.quantity = new_quantity
     item.save(update_fields=['quantity', 'updated_at'])
     cart.refresh_from_db()
     return Response(CartSerializer(cart).data)

@@ -634,6 +634,8 @@ class OrderCreateResponseTests(APITestCase):
         item = response.data['items'][0]
         self.assertIn('subtotal', item)
         self.assertEqual(float(item['subtotal']), float(item['unit_price']) * item['quantity'])
+        self.assertEqual(item['size_system'], self.size.size_system)
+        self.assertEqual(item['size_value'], self.size.size)
 
     def test_invoice_number_is_unique_per_order(self):
         """Two separate orders must receive different invoice numbers."""

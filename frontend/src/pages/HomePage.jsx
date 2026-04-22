@@ -5,6 +5,7 @@ import api from "../api";
 import Navbar from "../components/Navbar";
 import SneakerCard from "../components/SneakerCard";
 import ShoeSlider from "../components/ShoeSlider";
+import SizePickerDialog from "../components/SizePickerDialog";
 import { mapSneakerFromApi, normalizePaginatedList } from "../utils/sneakers";
 
 const DEFAULT_ORDERING = "-popularity_score";
@@ -79,6 +80,7 @@ function HomePage({ onAddToCart, cartCount }) {
   const [productsError, setProductsError] = useState("");
   const [cartError, setCartError] = useState("");
   const [addingSneakerId, setAddingSneakerId] = useState(null);
+  const [sizePickerSneaker, setSizePickerSneaker] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const navigate = useNavigate();
@@ -305,16 +307,28 @@ function HomePage({ onAddToCart, cartCount }) {
       return;
     }
 
-    setAddingSneakerId(sneaker.id);
+    setCartError("");
+    setSizePickerSneaker(sneaker);
+  };
+
+  const handleConfirmSize = async (sizeOption) => {
+    if (!sizePickerSneaker) {
+      return;
+    }
+
+    setAddingSneakerId(sizePickerSneaker.id);
     setCartError("");
 
     try {
-      await onAddToCart?.(sneaker);
-      navigate("/cart");
+      await onAddToCart?.(sizePickerSneaker, sizeOption);
+      setSizePickerSneaker(null);
     } catch (error) {
       const detail =
-        error.response?.data?.detail || "Could not add this sneaker to your cart.";
+        error.response?.data?.detail ||
+        error.message ||
+        "Could not add this sneaker to your cart.";
       setCartError(detail);
+      throw error;
     } finally {
       setAddingSneakerId(null);
     }
@@ -589,6 +603,13 @@ function HomePage({ onAddToCart, cartCount }) {
           )}
         </section>
       </main>
+
+      <SizePickerDialog
+        sneaker={sizePickerSneaker}
+        open={Boolean(sizePickerSneaker)}
+        onClose={() => setSizePickerSneaker(null)}
+        onConfirm={handleConfirmSize}
+      />
     </div>
   );
 }
