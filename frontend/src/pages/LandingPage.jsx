@@ -4,10 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
 import SneakerCard from "../components/SneakerCard";
 import ShoeSlider from "../components/ShoeSlider";
-import { savePendingCartItem } from "../utils/cart";
 import { mapSneakerFromApi, normalizePaginatedList } from "../utils/sneakers";
 
-function LandingPage({ onAddToCart }) {
+function LandingPage({ onAddToCart, cartCount = 0 }) {
   const navigate = useNavigate();
   const [featuredSneakers, setFeaturedSneakers] = useState([]);
   const [loadingSneakers, setLoadingSneakers] = useState(true);
@@ -51,19 +50,6 @@ function LandingPage({ onAddToCart }) {
   }, []);
 
   const handleAddToCart = async (sneaker) => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      savePendingCartItem(sneaker);
-      navigate("/login", {
-        state: {
-          redirectTo: "/cart",
-          message: "Log in or sign up to add sneakers to your cart.",
-        },
-      });
-      return;
-    }
-
     await onAddToCart?.(sneaker);
     navigate("/cart");
   };
@@ -76,6 +62,10 @@ function LandingPage({ onAddToCart }) {
         </Link>
 
         <div className="landing-nav-actions">
+          <Link to="/cart" className="nav-cart-link">
+            Cart
+            {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
+          </Link>
           <Link to="/login" className="landing-link">
             Log In
           </Link>

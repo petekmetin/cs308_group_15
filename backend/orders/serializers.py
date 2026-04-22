@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from .models import Order, OrderItem, Invoice, Delivery
 from products.serializers import SneakerListSerializer
@@ -52,6 +53,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
         return items
 
+    @transaction.atomic
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         customer = self.context['request'].user
@@ -61,8 +63,18 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         total = 0
         for item_data in items_data:
             sneaker = Sneaker.objects.get(id=item_data['sneaker_id'])
-            size = SneakerSize.objects.get(id=item_data['size_id'])
+            # select_for_update locks the row so concurrent requests queue up
+            # rather than both reading the same stock value simultaneously.
+            size = SneakerSize.objects.select_for_update().get(id=item_data['size_id'])
             quantity = item_data.get('quantity', 1)
+
+            # Re-check stock after acquiring the lock — another request may
+            # have deducted stock between validate_items() and here.
+            if size.stock < quantity:
+                raise serializers.ValidationError(
+                    f'Insufficient stock for {sneaker.name} size {size.size}.'
+                )
+
             price = sneaker.discounted_price or sneaker.price
 
             OrderItem.objects.create(

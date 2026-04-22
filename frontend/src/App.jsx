@@ -29,6 +29,14 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import api from "./api";
+import {
+  addToGuestCart,
+  clearGuestCart,
+  getGuestCart,
+  mergeGuestCartToServer,
+  removeGuestCartItem,
+  updateGuestCartItem,
+} from "./utils/cart";
 import LandingPage from "./pages/LandingPage";
 import LoginPage  from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -74,17 +82,15 @@ function PrivateRoute({ children }) {
 // Route maps each path to a page component.
 // ============================================================
 function App() {
-  const [cartItems, setCartItems] = useState([]);
-  // authToken must be React state — not a plain variable — so that the
-  // cart-loading effect re-fires when a different user logs in or out.
-  // App is the *parent* of BrowserRouter, so it does NOT re-render on
-  // route changes; only state changes can trigger a re-render here.
   const [authToken, setAuthToken] = useState(() =>
     localStorage.getItem("access_token")
   );
 
-  // Listen for the custom "auth-changed" event dispatched by login,
-  // signup, and logout handlers whenever they update localStorage.
+  // Initialise from guest cart when not logged in.
+  const [cartItems, setCartItems] = useState(() =>
+    localStorage.getItem("access_token") ? [] : getGuestCart()
+  );
+
   useEffect(() => {
     const handleAuthChange = () => {
       setAuthToken(localStorage.getItem("access_token"));
@@ -108,47 +114,70 @@ function App() {
 
   useEffect(() => {
     if (!authToken) {
-      setCartItems([]);
+      setCartItems(getGuestCart());
       return;
     }
 
-    api
-      .get("/api/cart/")
-      .then((response) => {
+    const load = async () => {
+      await mergeGuestCartToServer();
+      try {
+        const response = await api.get("/api/cart/");
         setCartItems(normalizeCart(response.data));
-      })
-      .catch(() => {
+      } catch {
         setCartItems([]);
-      });
+      }
+    };
+
+    load();
   }, [authToken]);
 
   const addToCart = async (sneaker) => {
-    const productId = sneaker.product_id ?? sneaker.id;
+    if (!authToken) {
+      setCartItems(addToGuestCart(sneaker));
+      return;
+    }
+    const productId   = sneaker.product_id ?? sneaker.id;
     const productSlug = sneaker.slug || (productId ? `sneaker-${productId}` : "");
-
-    const response = await api.post("/api/cart/items/", {
-      product_id: productId,
+    const response    = await api.post("/api/cart/items/", {
+      product_id:   productId,
       product_slug: productSlug,
       product_name: sneaker.name,
-      brand: sneaker.brand,
-      description: sneaker.description,
-      accent: sneaker.accent ?? "",
-      image_url: sneaker.image ?? "",
-      unit_price: sneaker.price,
-      quantity: 1,
+      brand:        sneaker.brand,
+      description:  sneaker.description,
+      accent:       sneaker.accent ?? "",
+      image_url:    sneaker.image  ?? "",
+      unit_price:   sneaker.price,
+      quantity:     1,
     });
-
     setCartItems(normalizeCart(response.data));
   };
 
   const updateCartQuantity = async (id, quantity) => {
+    if (!authToken) {
+      setCartItems(updateGuestCartItem(id, quantity));
+      return;
+    }
     const response = await api.patch(`/api/cart/items/${id}/`, { quantity });
     setCartItems(normalizeCart(response.data));
   };
 
   const removeFromCart = async (id) => {
+    if (!authToken) {
+      setCartItems(removeGuestCartItem(id));
+      return;
+    }
     const response = await api.delete(`/api/cart/items/${id}/delete/`);
     setCartItems(normalizeCart(response.data));
+  };
+
+  const clearCart = async () => {
+    if (!authToken) {
+      clearGuestCart();
+      setCartItems([]);
+      return;
+    }
+    await api.post("/api/cart/clear/");
+    setCartItems([]);
   };
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -159,7 +188,7 @@ function App() {
         {/* Public routes — anyone can visit these */}
         <Route
           path="/"
-          element={<LandingPage onAddToCart={addToCart} />}
+          element={<LandingPage onAddToCart={addToCart} cartCount={cartCount} />}
         />
         <Route path="/login"  element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
@@ -199,14 +228,13 @@ function App() {
         <Route
           path="/cart"
           element={
-            <PrivateRoute>
-              <CartPage
-                cartItems={cartItems}
-                onUpdateQuantity={updateCartQuantity}
-                onRemoveFromCart={removeFromCart}
-                cartCount={cartCount}
-              />
-            </PrivateRoute>
+            <CartPage
+              cartItems={cartItems}
+              onUpdateQuantity={updateCartQuantity}
+              onRemoveFromCart={removeFromCart}
+              onClearCart={clearCart}
+              cartCount={cartCount}
+            />
           }
         />
 

@@ -133,6 +133,14 @@ def update_cart_item(request, item_id):
     return Response(CartSerializer(cart).data)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def clear_cart(request):
+    cart = get_user_cart(request.user)
+    cart.items.all().delete()
+    return Response({'detail': 'Cart cleared.'})
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_cart_item(request, item_id):

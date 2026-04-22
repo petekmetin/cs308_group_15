@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
 from products.models import Brand, Category, Sneaker, SneakerSize
+from .models import Cart, CartItem
 
 
 class CartAddItemStockValidationTests(APITestCase):
@@ -82,3 +83,73 @@ class CartAddItemStockValidationTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['item_count'], 1)
         self.assertEqual(response.data['items'][0]['product_name'], self.in_stock.name)
+
+
+class CartClearTests(APITestCase):
+    """
+    Tests for POST /api/cart/clear/
+    """
+
+    def setUp(self):
+        self.customer = get_user_model().objects.create_user(
+            email='clear-customer@test.com',
+            username='clear_customer',
+            first_name='Clear',
+            last_name='Customer',
+            password='StrongPass123!',
+        )
+        brand    = Brand.objects.create(name='Clear Brand', slug='clear-brand')
+        category = Category.objects.create(name='Clear Cat', slug='clear-cat')
+        sneaker  = Sneaker.objects.create(
+            brand=brand, category=category,
+            name='Clear Shoe', model_number='CLR-001',
+            colorway='White', sku='SKU-CLR-001',
+            serial_number='SER-CLR-001',
+            description='Test sneaker.', price='100.00', is_active=True,
+        )
+        # Pre-load a cart with two items
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(
+            cart=cart, product_slug='sneaker-1', product_name='Shoe A',
+            brand='Brand A', unit_price='100.00', quantity=2,
+        )
+        CartItem.objects.create(
+            cart=cart, product_slug='sneaker-2', product_name='Shoe B',
+            brand='Brand B', unit_price='80.00', quantity=1,
+        )
+        self.client.force_authenticate(self.customer)
+
+    def test_requires_authentication(self):
+        self.client.force_authenticate(user=None)
+        response = self.client.post('/api/cart/clear/')
+        self.assertEqual(response.status_code, 401)
+
+    def test_clear_removes_all_items(self):
+        response = self.client.post('/api/cart/clear/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['detail'], 'Cart cleared.')
+        cart = Cart.objects.get(user=self.customer)
+        self.assertEqual(cart.items.count(), 0)
+
+    def test_clear_on_empty_cart_succeeds(self):
+        """Clearing an already empty cart should not error."""
+        Cart.objects.filter(user=self.customer).first().items.all().delete()
+        response = self.client.post('/api/cart/clear/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_clear_only_affects_own_cart(self):
+        """Clearing one customer's cart must not touch another customer's cart."""
+        other = get_user_model().objects.create_user(
+            email='other-clear@test.com', username='other_clear',
+            first_name='O', last_name='C', password='StrongPass123!',
+        )
+        other_cart = Cart.objects.create(user=other)
+        CartItem.objects.create(
+            cart=other_cart, product_slug='sneaker-99', product_name='Other Shoe',
+            brand='Other Brand', unit_price='50.00', quantity=1,
+        )
+
+        self.client.post('/api/cart/clear/')
+
+        other_cart.refresh_from_db()
+        self.assertEqual(other_cart.items.count(), 1)

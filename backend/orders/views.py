@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -30,14 +31,22 @@ class OrderListView(generics.ListAPIView):
 
 class OrderCreateView(generics.CreateAPIView):
     """
-    POST /api/orders/
-    Customers only.
+    POST /api/orders/create/
+    Customers only. Returns the full order plus invoice_number.
     """
     serializer_class = OrderCreateSerializer
     permission_classes = [IsCustomer]
 
-    def perform_create(self, serializer):
-        serializer.save()
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+        data = OrderSerializer(order, context={'request': request}).data
+        try:
+            data['invoice_number'] = order.invoice.invoice_number
+        except Exception:
+            data['invoice_number'] = None
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class OrderDetailView(generics.RetrieveAPIView):
@@ -72,14 +81,14 @@ def cancel_order(request, pk):
             status=400
         )
 
-    # Restore stock
-    for item in order.items.select_related('size').all():
-        if item.size:
-            item.size.stock += item.quantity
-            item.size.save()
+    with transaction.atomic():
+        for item in order.items.select_related('size').all():
+            if item.size:
+                item.size.stock += item.quantity
+                item.size.save()
 
-    order.status = 'cancelled'
-    order.save(update_fields=['status'])
+        order.status = 'cancelled'
+        order.save(update_fields=['status'])
     return Response(OrderSerializer(order).data)
 
 
@@ -123,16 +132,16 @@ def approve_refund(request, pk):
     if order.status != 'return_requested':
         return Response({'detail': 'Order is not awaiting refund.'}, status=400)
 
-    # Return stock to inventory
-    for item in order.items.select_related('size').all():
-        if item.size:
-            item.size.stock += item.quantity
-            item.size.save()
+    with transaction.atomic():
+        for item in order.items.select_related('size').all():
+            if item.size:
+                item.size.stock += item.quantity
+                item.size.save()
 
-    order.status = 'returned'
-    order.refund_approved_at = timezone.now()
-    order.refund_amount = order.total_price
-    order.save(update_fields=['status', 'refund_approved_at', 'refund_amount'])
+        order.status = 'returned'
+        order.refund_approved_at = timezone.now()
+        order.refund_amount = order.total_price
+        order.save(update_fields=['status', 'refund_approved_at', 'refund_amount'])
     return Response(OrderSerializer(order).data)
 
 
@@ -211,14 +220,15 @@ def update_delivery(request, pk):
         else:
             return Response({'detail': 'Invalid is_completed value.'}, status=400)
 
-    if delivery.status == 'delivered':
-        delivery.is_completed = True
-        delivery.delivered_at = timezone.now()
-        delivery.order.status = 'delivered'
-        delivery.order.save(update_fields=['status'])
+    with transaction.atomic():
+        if delivery.status == 'delivered':
+            delivery.is_completed = True
+            delivery.delivered_at = timezone.now()
+            delivery.order.status = 'delivered'
+            delivery.order.save(update_fields=['status'])
 
-    delivery.tracking_number = request.data.get('tracking_number', delivery.tracking_number)
-    delivery.notes = request.data.get('notes', delivery.notes)
-    delivery.save()
+        delivery.tracking_number = request.data.get('tracking_number', delivery.tracking_number)
+        delivery.notes = request.data.get('notes', delivery.notes)
+        delivery.save()
 
     return Response(DeliverySerializer(delivery).data)
