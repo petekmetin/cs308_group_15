@@ -1,17 +1,46 @@
-from rest_framework import generics, filters, status
+from django.db import transaction
+from rest_framework import generics, filters, serializers, status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.db.models import Q
 
-from .models import Brand, Category, Sneaker, SneakerSize, Wishlist, Review
+from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Wishlist, Review
 from .serializers import (
     BrandSerializer, CategorySerializer,
     SneakerListSerializer, SneakerDetailSerializer,
     WishlistSerializer, ReviewSerializer, SneakerSizeStockSerializer,
-    SneakerPriceUpdateSerializer,
+    SneakerImageManageSerializer, SneakerPriceUpdateSerializer,
+    SneakerSizeCreateSerializer,
 )
 from config.permissions import IsProductManager, IsSalesManager, IsCustomer
+
+
+PRICING_FIELDS = {'price', 'original_price', 'cost_price', 'discount_percentage'}
+
+
+def ensure_primary_image(sneaker, preferred_image_id=None):
+    """
+    Enforce "at most one primary" and keep one primary when images exist.
+    """
+    images = sneaker.images.order_by('order', 'id')
+    if not images.exists():
+        return
+
+    if preferred_image_id is not None:
+        images.exclude(id=preferred_image_id).update(is_primary=False)
+        images.filter(id=preferred_image_id).update(is_primary=True)
+        return
+
+    current_primary = images.filter(is_primary=True).first()
+    if current_primary:
+        images.exclude(id=current_primary.id).update(is_primary=False)
+        return
+
+    first_image = images.first()
+    images.exclude(id=first_image.id).update(is_primary=False)
+    images.filter(id=first_image.id).update(is_primary=True)
 
 
 # ─── Brands ───────────────────────────────────────────────────────────────────
@@ -159,6 +188,21 @@ class SneakerDetailView(generics.RetrieveUpdateDestroyAPIView):
             return [AllowAny()]
         return [IsProductManager()]
 
+    def update(self, request, *args, **kwargs):
+        incoming_fields = set(request.data.keys())
+        blocked_fields = sorted(PRICING_FIELDS.intersection(incoming_fields))
+        if blocked_fields:
+            return Response(
+                {
+                    'detail': (
+                        'Product managers cannot update pricing fields. '
+                        f'Blocked: {", ".join(blocked_fields)}.'
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().update(request, *args, **kwargs)
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         # Increment view counter without triggering updated_at change
@@ -191,6 +235,52 @@ class SneakerSizeStockUpdateView(generics.UpdateAPIView):
     serializer_class = SneakerSizeStockSerializer
     permission_classes = [IsProductManager]
     http_method_names = ['patch']
+
+
+class SneakerSizeCreateView(generics.CreateAPIView):
+    queryset = SneakerSize.objects.select_related('sneaker')
+    serializer_class = SneakerSizeCreateSerializer
+    permission_classes = [IsProductManager]
+
+
+class SneakerImageCreateView(generics.CreateAPIView):
+    queryset = SneakerImage.objects.select_related('sneaker')
+    serializer_class = SneakerImageManageSerializer
+    permission_classes = [IsProductManager]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def perform_create(self, serializer):
+        try:
+            sneaker = Sneaker.objects.get(pk=self.kwargs['pk'])
+        except Sneaker.DoesNotExist:
+            raise serializers.ValidationError({'detail': 'Sneaker not found.'})
+
+        with transaction.atomic():
+            image = serializer.save(sneaker=sneaker)
+            preferred_id = image.id if image.is_primary else None
+            ensure_primary_image(sneaker, preferred_id)
+
+
+class SneakerImageDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = SneakerImage.objects.select_related('sneaker')
+    serializer_class = SneakerImageManageSerializer
+    permission_classes = [IsProductManager]
+    http_method_names = ['patch', 'delete']
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            image = serializer.save()
+            preferred_id = image.id if image.is_primary else None
+            ensure_primary_image(image.sneaker, preferred_id)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        sneaker = instance.sneaker
+        with transaction.atomic():
+            instance.delete()
+            ensure_primary_image(sneaker)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['PATCH'])
@@ -286,8 +376,8 @@ class ReviewListView(generics.ListAPIView):
 class ReviewCreateView(generics.CreateAPIView):
     """
     POST /api/products/sneakers/<pk>/reviews/create/
-    Customers only. Reviews are auto-approved and appear on the product
-    page immediately (no manager moderation step).
+    Customers only. Reviews are created as pending and require
+    product-manager moderation before they become public.
     """
     serializer_class = ReviewSerializer
     permission_classes = [IsCustomer]
@@ -297,7 +387,7 @@ class ReviewCreateView(generics.CreateAPIView):
         serializer.save(
             customer=self.request.user,
             sneaker=sneaker,
-            status='approved',
+            status='pending',
         )
 
 
@@ -314,6 +404,46 @@ class PendingReviewListView(generics.ListAPIView):
         )
 
 
+class ReviewManagementListView(generics.ListAPIView):
+    """
+    GET /api/products/reviews/
+    Product managers can list all reviews, optionally filtered by status.
+    """
+    serializer_class = ReviewSerializer
+    permission_classes = [IsProductManager]
+
+    def get_queryset(self):
+        queryset = Review.objects.select_related('customer', 'sneaker').order_by('-created_at')
+        status_filter = (self.request.query_params.get('status') or '').strip().lower()
+        if status_filter:
+            if status_filter not in {'pending', 'approved', 'rejected'}:
+                return Review.objects.none()
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
+
+class ReviewDeleteView(generics.DestroyAPIView):
+    """
+    DELETE /api/products/reviews/<pk>/
+    Product managers can hard-delete any review.
+    """
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsProductManager]
+    http_method_names = ['delete']
+
+
+@api_view(['DELETE'])
+@permission_classes([IsProductManager])
+def clear_rejected_reviews(request):
+    """
+    DELETE /api/products/reviews/rejected/clear/
+    Removes all rejected reviews and returns deleted count.
+    """
+    deleted_count, _ = Review.objects.filter(status='rejected').delete()
+    return Response({'deleted_count': deleted_count})
+
+
 @api_view(['PATCH'])
 @permission_classes([IsProductManager])
 def moderate_review(request, pk):
@@ -328,8 +458,8 @@ def moderate_review(request, pk):
         return Response({'detail': 'Not found.'}, status=404)
 
     new_status = request.data.get('status')
-    if new_status not in ('approved', 'rejected'):
-        return Response({'detail': 'Status must be approved or rejected.'}, status=400)
+    if new_status not in ('pending', 'approved', 'rejected'):
+        return Response({'detail': 'Status must be pending, approved, or rejected.'}, status=400)
 
     review.status = new_status
     review.save(update_fields=['status'])

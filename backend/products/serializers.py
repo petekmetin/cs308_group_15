@@ -39,6 +39,19 @@ class SneakerSizeStockSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class SneakerSizeCreateSerializer(serializers.ModelSerializer):
+    sneaker_id = serializers.PrimaryKeyRelatedField(
+        queryset=Sneaker.objects.all(),
+        source='sneaker',
+        write_only=True,
+    )
+
+    class Meta:
+        model = SneakerSize
+        fields = ['id', 'sneaker_id', 'size', 'size_system', 'stock']
+        read_only_fields = ['id']
+
+
 class SneakerPriceUpdateSerializer(serializers.Serializer):
     price = serializers.DecimalField(
         max_digits=10,
@@ -68,6 +81,20 @@ class SneakerImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SneakerImage
         fields = ['id', 'image_url', 'alt_text', 'is_primary', 'order']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return build_media_url(request, obj.image)
+
+
+class SneakerImageManageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField(read_only=True)
+    sneaker_id = serializers.IntegerField(source='sneaker.id', read_only=True)
+
+    class Meta:
+        model = SneakerImage
+        fields = ['id', 'sneaker_id', 'image', 'image_url', 'alt_text', 'is_primary', 'order']
+        read_only_fields = ['id', 'sneaker_id', 'image_url']
 
     def get_image_url(self, obj):
         request = self.context.get('request')

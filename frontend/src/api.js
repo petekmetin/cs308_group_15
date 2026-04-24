@@ -22,14 +22,13 @@
 // It is similar to the browser's built-in fetch(), but with a
 // cleaner API and automatic JSON parsing.
 import axios from "axios";
+import { API_BASE_URL } from "./utils/apiBase";
 
 // ── Base URL ───────────────────────────────────────────────
 // All requests will be prefixed with this URL.
 // In development our Django backend runs on port 8000.
 // Vite's import.meta.env reads variables from a .env file —
 // if none is set we fall back to the local development server.
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
 // ── Create the axios instance ──────────────────────────────
 // Think of this like creating a "configured HTTP client" object.
 // Every call made through `api` will automatically use these settings.

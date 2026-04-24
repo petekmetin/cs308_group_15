@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { fetchJson } from "../../utils/http";
 
@@ -9,117 +9,381 @@ function normalizeList(payload) {
   return payload?.results ?? [];
 }
 
+function fmtCurrency(value) {
+  const number = Number(value);
+  if (Number.isNaN(number)) {
+    return "$0.00";
+  }
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(number);
+}
+
+function fmtDate(value) {
+  if (!value) {
+    return "—";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+}
+
+const DELIVERY_SECTIONS = [
+  { id: "pending", title: "Pending" },
+  { id: "cancelled", title: "Cancelled" },
+  { id: "returned_refunded", title: "Returned/Refunded" },
+  { id: "delivered", title: "Delivered" },
+];
+
+const STATUS_LABEL = {
+  pending: "Pending",
+  processing: "Processing",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  return_requested: "Return Requested",
+  returned: "Returned",
+};
+
+function mapSection(statusValue) {
+  const status = String(statusValue || "").toLowerCase();
+  if (status === "cancelled") {
+    return "cancelled";
+  }
+  if (status === "return_requested" || status === "returned") {
+    return "returned_refunded";
+  }
+  if (status === "delivered") {
+    return "delivered";
+  }
+  return "pending";
+}
+
+function formatProductIds(order) {
+  return (order.items || []).map((item) => `#${item.sneaker}`).join(", ");
+}
+
+function totalQuantity(order) {
+  return (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+}
+
 function DeliveryManagementTab({ accessToken }) {
-  const [deliveries, setDeliveries] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [updatingId, setUpdatingId] = useState(null);
+  const [updatingDeliveryStatus, setUpdatingDeliveryStatus] = useState("");
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadDeliveries = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const payload = await fetchJson("/api/orders/deliveries/", { token: accessToken });
-        if (mounted) {
-          setDeliveries(normalizeList(payload));
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err.message || "Could not load deliveries.");
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
+  const groupedOrders = useMemo(() => {
+    const groups = {
+      pending: [],
+      cancelled: [],
+      returned_refunded: [],
+      delivered: [],
     };
 
-    loadDeliveries();
-    return () => {
-      mounted = false;
-    };
-  }, [accessToken]);
+    orders.forEach((order) => {
+      const key = mapSection(order.status);
+      groups[key].push(order);
+    });
 
-  const handleStatusChange = async (deliveryId, newStatus) => {
-    setUpdatingId(deliveryId);
+    return groups;
+  }, [orders]);
+
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) || null,
+    [orders, selectedOrderId]
+  );
+
+  const loadOrders = async () => {
+    setLoading(true);
     setError("");
     try {
-      const payload = await fetchJson(`/api/orders/deliveries/${deliveryId}/`, {
+      const payload = await fetchJson("/api/orders/", { token: accessToken });
+      const list = normalizeList(payload);
+      setOrders(list);
+      setSelectedOrderId((prev) => {
+        if (prev && list.some((order) => order.id === prev)) {
+          return prev;
+        }
+        return null;
+      });
+    } catch (err) {
+      setError(err.message || "Could not load delivery orders.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!selectedOrderId) {
+      return undefined;
+    }
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setSelectedOrderId(null);
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [selectedOrderId]);
+
+  const updateDeliveryStatus = async (newStatus) => {
+    if (!selectedOrder?.delivery_id) {
+      return;
+    }
+
+    setUpdatingDeliveryStatus(newStatus);
+    setError("");
+    try {
+      await fetchJson(`/api/orders/deliveries/${selectedOrder.delivery_id}/`, {
         method: "PATCH",
         token: accessToken,
         body: { status: newStatus },
       });
-
-      setDeliveries((prev) => {
-        if (newStatus === "delivered" || payload?.is_completed) {
-          return prev.filter((delivery) => delivery.id !== deliveryId);
-        }
-        return prev.map((delivery) => (delivery.id === deliveryId ? payload : delivery));
-      });
+      await loadOrders();
     } catch (err) {
       setError(err.message || "Could not update delivery status.");
     } finally {
-      setUpdatingId(null);
+      setUpdatingDeliveryStatus("");
     }
   };
 
   return (
     <section className="manager-tab-panel">
-      <h2>Delivery Management</h2>
+      <div className="manager-panel-heading">
+        <div>
+          <h2>Delivery Management</h2>
+          <p className="manager-panel-note">
+            Delivery list with invoice references, product IDs, quantities, and addresses.
+          </p>
+        </div>
+        <button type="button" className="manager-secondary-btn" onClick={loadOrders}>
+          Refresh
+        </button>
+      </div>
+
       {error ? <p className="manager-error">{error}</p> : null}
+
       {loading ? (
-        <p className="manager-status">Loading deliveries...</p>
-      ) : deliveries.length === 0 ? (
-        <p className="manager-empty">No incomplete deliveries right now.</p>
+        <p className="manager-status">Loading delivery list...</p>
       ) : (
-        <div className="manager-table-wrap">
-          <table className="manager-table">
-            <thead>
-              <tr>
-                <th>Delivery ID</th>
-                <th>Customer ID</th>
-                <th>Products</th>
-                <th>Total Price</th>
-                <th>Address</th>
-                <th>Status</th>
-                <th>Completed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {deliveries.map((delivery) => (
-                <tr key={delivery.id}>
-                  <td>{delivery.id}</td>
-                  <td>{delivery.order?.customer}</td>
-                  <td>
-                    {(delivery.order?.items || []).map((item) => (
-                      <p key={item.id}>
-                        {item.sneaker_name || `#${item.sneaker}`} x {item.quantity}
-                      </p>
-                    ))}
-                  </td>
-                  <td>{delivery.order?.total_price}</td>
-                  <td>{delivery.delivery_address}</td>
-                  <td>
-                    <select
-                      value={delivery.status}
-                      disabled={updatingId === delivery.id}
-                      onChange={(event) => handleStatusChange(delivery.id, event.target.value)}
-                    >
-                      <option value="pending">pending</option>
-                      <option value="in_transit">in_transit</option>
-                      <option value="delivered">delivered</option>
-                    </select>
-                  </td>
-                  <td>{delivery.is_completed ? "Yes" : "No"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="manager-delivery-layout">
+          <div className="manager-delivery-sections">
+            {DELIVERY_SECTIONS.map((section) => {
+              const rows = groupedOrders[section.id] || [];
+              return (
+                <section key={section.id} className="manager-delivery-group">
+                  <div className="manager-delivery-group-head">
+                    <h3>{section.title}</h3>
+                    <span className="manager-status-badge">{rows.length}</span>
+                  </div>
+                  {rows.length === 0 ? (
+                    <p className="manager-empty">No rows in this section.</p>
+                  ) : (
+                    <div className="manager-table-wrap manager-table-wrap-scroll">
+                      <table className="manager-table manager-delivery-table">
+                        <thead>
+                          <tr>
+                            <th>Delivery ID</th>
+                            <th>Customer ID</th>
+                            <th>Product ID(s)</th>
+                            <th>Qty</th>
+                            <th>Total</th>
+                            <th>Address</th>
+                            <th>Completed</th>
+                            <th>Invoice</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((order) => (
+                            <tr
+                              key={order.id}
+                              className={selectedOrderId === order.id ? "manager-delivery-row-selected" : ""}
+                            >
+                              <td>{order.delivery_id ?? "—"}</td>
+                              <td>{order.customer ?? "—"}</td>
+                              <td>{formatProductIds(order) || "—"}</td>
+                              <td>{totalQuantity(order)}</td>
+                              <td>{fmtCurrency(order.total_price)}</td>
+                              <td>{order.delivery_address || "—"}</td>
+                              <td>
+                                {order.delivery_is_completed === null
+                                  ? "—"
+                                  : order.delivery_is_completed
+                                    ? "Yes"
+                                    : "No"}
+                              </td>
+                              <td>{order.invoice_number || "—"}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="manager-secondary-btn"
+                                  onClick={() => setSelectedOrderId(order.id)}
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
+
+      {selectedOrder ? (
+        <div
+          className="manager-delivery-modal-backdrop"
+          onClick={() => setSelectedOrderId(null)}
+          role="presentation"
+        >
+          <aside
+            className="manager-delivery-modal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Delivery details for order ${selectedOrder.id}`}
+          >
+            <header className="manager-order-detail-head">
+              <div>
+                <p className="section-kicker">Selected Order</p>
+                <h3>Order #{selectedOrder.id}</h3>
+                <p className="manager-panel-note">
+                  {STATUS_LABEL[selectedOrder.status] || selectedOrder.status} ·{" "}
+                  {fmtDate(selectedOrder.created_at)}
+                </p>
+              </div>
+              <div className="manager-row-actions">
+                <strong>{fmtCurrency(selectedOrder.total_price)}</strong>
+                <button
+                  type="button"
+                  className="manager-neutral-btn"
+                  onClick={() => setSelectedOrderId(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </header>
+
+            <div className="manager-order-detail-meta">
+              <p>
+                <strong>Delivery ID:</strong> {selectedOrder.delivery_id ?? "—"}
+              </p>
+              <p>
+                <strong>Invoice:</strong> {selectedOrder.invoice_number || "—"}
+              </p>
+              <p>
+                <strong>Customer ID:</strong> {selectedOrder.customer ?? "—"}
+              </p>
+              <p>
+                <strong>Completed:</strong>{" "}
+                {selectedOrder.delivery_is_completed === null
+                  ? "—"
+                  : selectedOrder.delivery_is_completed
+                    ? "Yes"
+                    : "No"}
+              </p>
+              <p>
+                <strong>Address:</strong> {selectedOrder.delivery_address || "—"}
+              </p>
+            </div>
+
+            <div className="manager-order-items">
+              {(selectedOrder.items || []).map((item) => {
+                const displayName =
+                  item.sneaker_detail?.name ||
+                  item.sneaker_detail?.brand_name ||
+                  `Sneaker #${item.sneaker}`;
+                const displayBrand = item.sneaker_detail?.brand_name || "Unknown brand";
+                return (
+                  <article key={item.id} className="manager-order-item">
+                    <div className="manager-order-item-media">
+                      {item.sneaker_detail?.primary_image ? (
+                        <img
+                          src={item.sneaker_detail.primary_image}
+                          alt={displayName}
+                          className="manager-order-item-image"
+                        />
+                      ) : (
+                        <div className="manager-order-item-fallback">
+                          {(displayBrand || displayName).slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="manager-order-item-copy">
+                      <p className="manager-order-item-brand">{displayBrand}</p>
+                      <p className="manager-order-item-name">
+                        {displayName} (#{item.sneaker})
+                      </p>
+                      <p className="manager-order-item-meta">
+                        Qty {item.quantity}
+                        {item.size_system && item.size_value
+                          ? ` · Size ${item.size_system} ${item.size_value}`
+                          : ""}
+                      </p>
+                    </div>
+                    <strong>{fmtCurrency(item.subtotal ?? item.unit_price * item.quantity)}</strong>
+                  </article>
+                );
+              })}
+            </div>
+
+            {selectedOrder.delivery_id ? (
+              <div className="manager-delivery-editor">
+                <p className="manager-panel-note">Update delivery status</p>
+                <div className="manager-row-actions">
+                  <button
+                    type="button"
+                    className="manager-secondary-btn"
+                    disabled={Boolean(updatingDeliveryStatus)}
+                    onClick={() => updateDeliveryStatus("pending")}
+                  >
+                    {updatingDeliveryStatus === "pending" ? "Saving..." : "Mark Pending"}
+                  </button>
+                  <button
+                    type="button"
+                    className="manager-secondary-btn"
+                    disabled={Boolean(updatingDeliveryStatus)}
+                    onClick={() => updateDeliveryStatus("in_transit")}
+                  >
+                    {updatingDeliveryStatus === "in_transit" ? "Saving..." : "Mark In Transit"}
+                  </button>
+                  <button
+                    type="button"
+                    className="manager-primary-btn"
+                    disabled={Boolean(updatingDeliveryStatus)}
+                    onClick={() => updateDeliveryStatus("delivered")}
+                  >
+                    {updatingDeliveryStatus === "delivered" ? "Saving..." : "Mark Delivered"}
+                  </button>
+                  <button
+                    type="button"
+                    className="manager-danger-btn"
+                    disabled={Boolean(updatingDeliveryStatus)}
+                    onClick={() => updateDeliveryStatus("failed")}
+                  >
+                    {updatingDeliveryStatus === "failed" ? "Saving..." : "Mark Failed"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="manager-empty">No delivery record attached to this order.</p>
+            )}
+          </aside>
+        </div>
+      ) : null}
     </section>
   );
 }

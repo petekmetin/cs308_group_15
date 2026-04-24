@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from .models import Order, OrderItem, Invoice, Delivery
 from products.serializers import SneakerListSerializer
@@ -129,16 +130,38 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     customer_email = serializers.CharField(source='customer.email', read_only=True)
+    invoice_number = serializers.SerializerMethodField()
+    delivery_id = serializers.SerializerMethodField()
+    delivery_is_completed = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id', 'customer', 'customer_email', 'status',
             'total_price', 'delivery_address', 'credit_card_last4',
+            'invoice_number', 'delivery_id', 'delivery_is_completed',
             'items', 'refund_requested_at', 'refund_approved_at', 'refund_amount',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'customer', 'total_price', 'created_at', 'updated_at']
+
+    def get_invoice_number(self, obj):
+        try:
+            return obj.invoice.invoice_number
+        except ObjectDoesNotExist:
+            return None
+
+    def get_delivery_id(self, obj):
+        try:
+            return obj.delivery.id
+        except ObjectDoesNotExist:
+            return None
+
+    def get_delivery_is_completed(self, obj):
+        try:
+            return bool(obj.delivery.is_completed)
+        except ObjectDoesNotExist:
+            return None
 
 
 class DeliveryOrderItemSerializer(serializers.ModelSerializer):

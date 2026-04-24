@@ -136,6 +136,107 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(rows, [])
 
 
+class OrderListMetadataTests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.pm_user = user_model.objects.create_user(
+            email='pm-metadata@example.com',
+            username='pm_metadata',
+            first_name='Meta',
+            last_name='Manager',
+            password='StrongPass123!',
+            role='product_manager',
+        )
+        self.customer_user = user_model.objects.create_user(
+            email='customer-metadata@example.com',
+            username='customer_metadata',
+            first_name='Meta',
+            last_name='Customer',
+            password='StrongPass123!',
+            role='customer',
+        )
+
+        brand = Brand.objects.create(name='Meta Brand', slug='meta-brand')
+        category = Category.objects.create(name='Meta Category', slug='meta-category')
+        sneaker = Sneaker.objects.create(
+            brand=brand,
+            category=category,
+            name='Meta Sneaker',
+            model_number='META-001',
+            colorway='White',
+            sku='SKU-META-001',
+            serial_number='SER-META-001',
+            description='Metadata test sneaker.',
+            price='100.00',
+            is_active=True,
+        )
+        size = SneakerSize.objects.create(
+            sneaker=sneaker,
+            size_system='EU',
+            size='42',
+            stock=4,
+        )
+
+        self.order_with_meta = Order.objects.create(
+            customer=self.customer_user,
+            status='pending',
+            total_price='100.00',
+            delivery_address='Meta Street 1',
+            credit_card_last4='1234',
+        )
+        OrderItem.objects.create(
+            order=self.order_with_meta,
+            sneaker=sneaker,
+            size=size,
+            quantity=1,
+            unit_price='100.00',
+        )
+        self.invoice = Invoice.objects.create(
+            order=self.order_with_meta,
+            invoice_number='INV-META-0001',
+        )
+        self.delivery = Delivery.objects.create(
+            order=self.order_with_meta,
+            status='pending',
+            delivery_address=self.order_with_meta.delivery_address,
+            is_completed=False,
+        )
+
+        self.order_without_meta = Order.objects.create(
+            customer=self.customer_user,
+            status='pending',
+            total_price='100.00',
+            delivery_address='Meta Street 2',
+            credit_card_last4='5678',
+        )
+        OrderItem.objects.create(
+            order=self.order_without_meta,
+            sneaker=sneaker,
+            size=size,
+            quantity=1,
+            unit_price='100.00',
+        )
+
+    def test_manager_order_list_includes_invoice_and_delivery_metadata(self):
+        client = self.client_class()
+        client.force_authenticate(self.pm_user)
+        response = client.get('/api/orders/')
+        self.assertEqual(response.status_code, 200)
+        rows = response.data.get('results', response.data)
+
+        by_id = {row['id']: row for row in rows}
+        with_meta = by_id[self.order_with_meta.id]
+        without_meta = by_id[self.order_without_meta.id]
+
+        self.assertEqual(with_meta['invoice_number'], self.invoice.invoice_number)
+        self.assertEqual(with_meta['delivery_id'], self.delivery.id)
+        self.assertFalse(with_meta['delivery_is_completed'])
+
+        self.assertIsNone(without_meta['invoice_number'])
+        self.assertIsNone(without_meta['delivery_id'])
+        self.assertIsNone(without_meta['delivery_is_completed'])
+
+
 class OrderTransactionTests(APITestCase):
     """
     Verifies that each multi-write operation is fully atomic:

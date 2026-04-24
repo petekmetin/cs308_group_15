@@ -31,6 +31,8 @@ import api from "../api";
 function Navbar({ user, cartCount = 0 }) {
   const navigate = useNavigate();
   const userRole = localStorage.getItem("user_role") || user?.role || "";
+  const isCustomer = userRole === "customer";
+  const ordersLabel = isCustomer ? "Orders" : "All Orders";
 
   // ── handleLogout ───────────────────────────────────────────
   // Called when the user clicks the "Sign Out" button.
@@ -84,14 +86,18 @@ function Navbar({ user, cartCount = 0 }) {
           </Link>
         ) : null}
 
-        <Link to="/cart" className="nav-cart-link">
-          Cart
-          {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
-        </Link>
+        {isCustomer ? (
+          <Link to="/cart" className="nav-cart-link">
+            Cart
+            {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
+          </Link>
+        ) : null}
 
-        <Link to="/orders" className="nav-cart-link">
-          Orders
-        </Link>
+        {userRole !== "product_manager" ? (
+          <Link to="/orders" className="nav-cart-link">
+            {ordersLabel}
+          </Link>
+        ) : null}
 
         {/*
           Optional chaining (user?.username): safely accesses .username

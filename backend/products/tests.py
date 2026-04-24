@@ -1,7 +1,13 @@
+import tempfile
+from io import BytesIO
+
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from PIL import Image
 from rest_framework.test import APITestCase
 
-from .models import Brand, Category, Sneaker, SneakerSize, Review
+from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Review
 
 
 class SneakerListApiTests(APITestCase):
@@ -151,6 +157,12 @@ class SneakerListApiTests(APITestCase):
 
 class ProductManagerWorkflowApiTests(APITestCase):
     def setUp(self):
+        self._media_dir = tempfile.TemporaryDirectory()
+        self._media_override = override_settings(MEDIA_ROOT=self._media_dir.name)
+        self._media_override.enable()
+        self.addCleanup(self._media_override.disable)
+        self.addCleanup(self._media_dir.cleanup)
+
         user_model = get_user_model()
         self.pm_user = user_model.objects.create_user(
             email='pm@example.com',
@@ -164,6 +176,14 @@ class ProductManagerWorkflowApiTests(APITestCase):
             email='customer@example.com',
             username='customer_user',
             first_name='Alice',
+            last_name='Customer',
+            password='StrongPass123!',
+            role='customer',
+        )
+        self.second_customer_user = user_model.objects.create_user(
+            email='customer2@example.com',
+            username='customer_user_2',
+            first_name='Bob',
             last_name='Customer',
             password='StrongPass123!',
             role='customer',
@@ -217,6 +237,22 @@ class ProductManagerWorkflowApiTests(APITestCase):
             comment='Solid pickup',
             status='approved',
         )
+        self.rejected_review = Review.objects.create(
+            sneaker=self.active_sneaker,
+            customer=self.second_customer_user,
+            rating=2,
+            comment='Not for me',
+            status='rejected',
+        )
+
+    def _sample_png(self, name='sample.png'):
+        buffer = BytesIO()
+        Image.new('RGB', (2, 2), color=(12, 120, 210)).save(buffer, format='PNG')
+        return SimpleUploadedFile(
+            name,
+            buffer.getvalue(),
+            content_type='image/png',
+        )
 
     def test_pending_reviews_endpoint_permissions_and_payload(self):
         customer_client = self.client_class()
@@ -235,6 +271,78 @@ class ProductManagerWorkflowApiTests(APITestCase):
         self.assertEqual(rows[0]['status'], 'pending')
         self.assertEqual(rows[0]['sneaker_name'], self.active_sneaker.name)
         self.assertTrue(rows[0]['customer_name'])
+
+    def test_review_management_list_filter_delete_and_clear_rejected(self):
+        customer_client = self.client_class()
+        customer_client.force_authenticate(self.customer_user)
+        customer_denied = customer_client.get('/api/products/reviews/')
+        self.assertEqual(customer_denied.status_code, 403)
+
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+
+        all_reviews = pm_client.get('/api/products/reviews/')
+        self.assertEqual(all_reviews.status_code, 200)
+        rows = all_reviews.data.get('results', all_reviews.data)
+        self.assertEqual(len(rows), 3)
+
+        pending_reviews = pm_client.get('/api/products/reviews/?status=pending')
+        self.assertEqual(pending_reviews.status_code, 200)
+        pending_rows = pending_reviews.data.get('results', pending_reviews.data)
+        self.assertEqual({row['status'] for row in pending_rows}, {'pending'})
+        self.assertEqual({row['id'] for row in pending_rows}, {self.pending_review.id})
+
+        rejected_reviews = pm_client.get('/api/products/reviews/?status=rejected')
+        self.assertEqual(rejected_reviews.status_code, 200)
+        rejected_rows = rejected_reviews.data.get('results', rejected_reviews.data)
+        self.assertEqual({row['id'] for row in rejected_rows}, {self.rejected_review.id})
+
+        deleted = pm_client.delete(f'/api/products/reviews/{self.approved_review.id}/')
+        self.assertEqual(deleted.status_code, 204)
+        self.assertFalse(Review.objects.filter(id=self.approved_review.id).exists())
+
+        cleared = pm_client.delete('/api/products/reviews/rejected/clear/')
+        self.assertEqual(cleared.status_code, 200)
+        self.assertEqual(cleared.data['deleted_count'], 1)
+        self.assertFalse(Review.objects.filter(id=self.rejected_review.id).exists())
+
+    def test_category_and_brand_patch_editing_and_unique_validation(self):
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+
+        category_update = pm_client.patch(
+            f'/api/products/categories/{self.category.id}/',
+            {'name': 'Basketball Updated', 'slug': 'basketball-updated', 'description': 'Updated'},
+            format='json',
+        )
+        self.assertEqual(category_update.status_code, 200)
+        self.category.refresh_from_db()
+        self.assertEqual(self.category.slug, 'basketball-updated')
+
+        second_category = Category.objects.create(name='Running', slug='running')
+        duplicate_category = pm_client.patch(
+            f'/api/products/categories/{second_category.id}/',
+            {'slug': 'basketball-updated'},
+            format='json',
+        )
+        self.assertEqual(duplicate_category.status_code, 400)
+
+        brand_update = pm_client.patch(
+            f'/api/products/brands/{self.brand.id}/',
+            {'name': 'Jordan Updated', 'slug': 'jordan-updated', 'description': 'Updated brand'},
+            format='json',
+        )
+        self.assertEqual(brand_update.status_code, 200)
+        self.brand.refresh_from_db()
+        self.assertEqual(self.brand.slug, 'jordan-updated')
+
+        second_brand = Brand.objects.create(name='Nike', slug='nike')
+        duplicate_brand = pm_client.patch(
+            f'/api/products/brands/{second_brand.id}/',
+            {'slug': 'jordan-updated'},
+            format='json',
+        )
+        self.assertEqual(duplicate_brand.status_code, 400)
 
     def test_sneaker_size_stock_patch_permissions_and_validation(self):
         customer_client = self.client_class()
@@ -264,6 +372,72 @@ class ProductManagerWorkflowApiTests(APITestCase):
         self.sneaker_size.refresh_from_db()
         self.assertEqual(self.sneaker_size.stock, 9)
 
+    def test_sneaker_size_create_and_duplicate_validation(self):
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+
+        created = pm_client.post(
+            '/api/products/sneaker-sizes/',
+            {
+                'sneaker_id': self.active_sneaker.id,
+                'size_system': 'EU',
+                'size': '42',
+                'stock': 5,
+            },
+            format='json',
+        )
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data['size_system'], 'EU')
+        self.assertEqual(created.data['size'], '42')
+
+        duplicate = pm_client.post(
+            '/api/products/sneaker-sizes/',
+            {
+                'sneaker_id': self.active_sneaker.id,
+                'size_system': 'EU',
+                'size': '42',
+                'stock': 7,
+            },
+            format='json',
+        )
+        self.assertEqual(duplicate.status_code, 400)
+
+    def test_product_manager_can_toggle_active_state_via_patch(self):
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+
+        deactivated = pm_client.patch(
+            f'/api/products/sneakers/{self.active_sneaker.id}/',
+            {'is_active': False},
+            format='json',
+        )
+        self.assertEqual(deactivated.status_code, 200)
+        self.active_sneaker.refresh_from_db()
+        self.assertFalse(self.active_sneaker.is_active)
+
+        activated = pm_client.patch(
+            f'/api/products/sneakers/{self.active_sneaker.id}/',
+            {'is_active': True},
+            format='json',
+        )
+        self.assertEqual(activated.status_code, 200)
+        self.active_sneaker.refresh_from_db()
+        self.assertTrue(self.active_sneaker.is_active)
+
+    def test_product_manager_cannot_patch_pricing_fields(self):
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+
+        denied = pm_client.patch(
+            f'/api/products/sneakers/{self.active_sneaker.id}/',
+            {'discount_percentage': '15.00', 'price': '200.00'},
+            format='json',
+        )
+        self.assertEqual(denied.status_code, 403)
+        self.active_sneaker.refresh_from_db()
+        self.assertEqual(str(self.active_sneaker.price), '150.00')
+        self.assertEqual(str(self.active_sneaker.discount_percentage), '0.00')
+
     def test_soft_delete_and_include_inactive_inventory(self):
         pm_client = self.client_class()
         pm_client.force_authenticate(self.pm_user)
@@ -284,6 +458,45 @@ class ProductManagerWorkflowApiTests(APITestCase):
         inventory_ids = {row['id'] for row in pm_inventory.data['results']}
         self.assertIn(self.active_sneaker.id, inventory_ids)
         self.assertIn(self.inactive_sneaker.id, inventory_ids)
+
+    def test_image_upload_primary_switch_and_delete_fallback(self):
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+
+        first = pm_client.post(
+            f'/api/products/sneakers/{self.active_sneaker.id}/images/',
+            {'image': self._sample_png('first.png'), 'is_primary': True, 'order': 0},
+            format='multipart',
+        )
+        self.assertEqual(first.status_code, 201)
+
+        second = pm_client.post(
+            f'/api/products/sneakers/{self.active_sneaker.id}/images/',
+            {'image': self._sample_png('second.png'), 'is_primary': False, 'order': 1},
+            format='multipart',
+        )
+        self.assertEqual(second.status_code, 201)
+
+        first_image = SneakerImage.objects.get(pk=first.data['id'])
+        second_image = SneakerImage.objects.get(pk=second.data['id'])
+        self.assertTrue(first_image.is_primary)
+        self.assertFalse(second_image.is_primary)
+
+        promote = pm_client.patch(
+            f'/api/products/sneaker-images/{second_image.id}/',
+            {'is_primary': True},
+            format='json',
+        )
+        self.assertEqual(promote.status_code, 200)
+        first_image.refresh_from_db()
+        second_image.refresh_from_db()
+        self.assertFalse(first_image.is_primary)
+        self.assertTrue(second_image.is_primary)
+
+        removed = pm_client.delete(f'/api/products/sneaker-images/{second_image.id}/')
+        self.assertEqual(removed.status_code, 204)
+        first_image.refresh_from_db()
+        self.assertTrue(first_image.is_primary)
 
     def test_review_create_and_moderation_regression(self):
         review_sneaker = Sneaker.objects.create(

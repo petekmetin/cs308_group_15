@@ -23,10 +23,14 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        base_queryset = (
+            Order.objects.select_related('customer', 'invoice', 'delivery')
+            .prefetch_related('items__sneaker')
+        )
         user = self.request.user
         if user.role == 'customer':
-            return Order.objects.filter(customer=user).prefetch_related('items__sneaker')
-        return Order.objects.all().prefetch_related('items__sneaker')
+            return base_queryset.filter(customer=user)
+        return base_queryset
 
 
 class OrderCreateView(generics.CreateAPIView):
@@ -57,10 +61,14 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        base_queryset = (
+            Order.objects.select_related('customer', 'invoice', 'delivery')
+            .prefetch_related('items__sneaker')
+        )
         user = self.request.user
         if user.role == 'customer':
-            return Order.objects.filter(customer=user)
-        return Order.objects.all()
+            return base_queryset.filter(customer=user)
+        return base_queryset
 
 
 @api_view(['POST'])

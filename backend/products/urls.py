@@ -15,13 +15,19 @@ urlpatterns = [
     path('sizes/options/', views.SneakerSizeOptionsView.as_view(), name='sneaker-size-options'),
     path('sneakers/create/', views.SneakerCreateView.as_view(), name='sneaker-create'),
     path('sneakers/<int:pk>/', views.SneakerDetailView.as_view(), name='sneaker-detail'),
+    path('sneakers/<int:pk>/images/', views.SneakerImageCreateView.as_view(), name='sneaker-image-create'),
+    path('sneaker-images/<int:pk>/', views.SneakerImageDetailView.as_view(), name='sneaker-image-detail'),
+    path('sneaker-sizes/', views.SneakerSizeCreateView.as_view(), name='sneaker-size-create'),
     path('sneaker-sizes/<int:pk>/', views.SneakerSizeStockUpdateView.as_view(), name='sneaker-size-update'),
     path('sneakers/<int:pk>/set-price/', views.set_sneaker_price, name='sneaker-set-price'),
 
     # Reviews
     path('sneakers/<int:pk>/reviews/', views.ReviewListView.as_view(), name='review-list'),
     path('sneakers/<int:pk>/reviews/create/', views.ReviewCreateView.as_view(), name='review-create'),
+    path('reviews/', views.ReviewManagementListView.as_view(), name='review-management-list'),
     path('reviews/pending/', views.PendingReviewListView.as_view(), name='review-pending'),
+    path('reviews/rejected/clear/', views.clear_rejected_reviews, name='review-clear-rejected'),
+    path('reviews/<int:pk>/', views.ReviewDeleteView.as_view(), name='review-delete'),
     path('reviews/<int:pk>/moderate/', views.moderate_review, name='review-moderate'),
 
     # Wishlist

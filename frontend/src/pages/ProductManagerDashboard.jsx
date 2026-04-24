@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import Navbar from "../components/Navbar";
 import CategoryManagementTab from "../components/manager/CategoryManagementTab";
@@ -17,11 +17,21 @@ const DASHBOARD_TABS = [
 
 function ProductManagerDashboard({ cartCount = 0 }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("reviews");
   const [loadingAccess, setLoadingAccess] = useState(true);
   const [user, setUser] = useState(() => getStoredUser());
   const accessToken = localStorage.getItem("access_token") || "";
   const userRole = useMemo(() => getStoredRole(), [user]);
+
+  useEffect(() => {
+    const requestedTab = (searchParams.get("tab") || "").trim();
+    const allowedTabs = new Set(DASHBOARD_TABS.map((tab) => tab.id));
+    if (!requestedTab || !allowedTabs.has(requestedTab)) {
+      return;
+    }
+    setActiveTab((prev) => (prev === requestedTab ? prev : requestedTab));
+  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -76,13 +86,23 @@ function ProductManagerDashboard({ cartCount = 0 }) {
     return null;
   }
 
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tabId);
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <div className="page">
       <Navbar user={user} cartCount={cartCount} />
       <main className="manager-page">
         <header className="manager-header">
-          <h1>Product Manager Dashboard</h1>
-          <p>Moderate reviews, manage catalog inventory, and update delivery progress.</p>
+          <p className="section-kicker">Management</p>
+          <h1 className="welcome-title">Product Manager Dashboard</h1>
+          <p className="section-note">
+            Moderate reviews, manage catalog inventory, and update delivery progress.
+          </p>
         </header>
 
         <div className="manager-tablist" role="tablist" aria-label="Product manager sections">
@@ -93,7 +113,7 @@ function ProductManagerDashboard({ cartCount = 0 }) {
               role="tab"
               aria-selected={activeTab === tab.id}
               className={`manager-tab ${activeTab === tab.id ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
             </button>

@@ -48,7 +48,7 @@ function ReviewSubmissionForm({ sneakerId, accessToken, onSubmitted }) {
     <form className="review-form" onSubmit={handleSubmit}>
       {successAt ? (
         <p className="review-success" key={successAt}>
-          Thanks for your review! It's now live below.
+          Thanks for your review. It is now pending product-manager approval.
         </p>
       ) : null}
       <label className="review-form-label">Your Rating</label>
