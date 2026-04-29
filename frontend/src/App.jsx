@@ -291,7 +291,7 @@ function App() {
           path="/sneakers/:id"
           element={
             <PrivateRoute>
-              <SneakerDetail cartCount={cartCount} />
+              <SneakerDetail onAddToCart={addToCart} cartCount={cartCount} />
             </PrivateRoute>
           }
         />
