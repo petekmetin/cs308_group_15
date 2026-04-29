@@ -2667,3 +2667,80 @@ input::placeholder {
     font-size: 1.4rem;
   }
 }
+
+/* ── Card Heart Button ─────────────────────────────────── */
+.card-heart-btn {
+  top: 0.6rem;
+  right: 0.6rem;
+}
+
+.sneaker-media {
+  position: relative;
+}
+
+/* ── Wishlist Page ─────────────────────────────────────── */
+.wishlist-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0 1rem;
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+}
+
+.wishlist-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: #181818;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  min-width: 180px;
+}
+
+.wishlist-grid-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.wishlist-card-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.wishlist-remove-btn {
+  margin-top: -0.25rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #3a2020;
+  border-radius: 0 0 12px 12px;
+  background: #1a1212;
+  color: #e57373;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.wishlist-remove-btn:hover:not(:disabled) {
+  background: #2a1515;
+  color: #ff8a80;
+}
+
+.wishlist-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .wishlist-header {
+    flex-direction: column;
+  }
+  .wishlist-stats {
+    width: 100%;
+  }
+}

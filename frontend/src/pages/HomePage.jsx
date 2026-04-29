@@ -7,6 +7,7 @@ import SneakerCard from "../components/SneakerCard";
 import ShoeSlider from "../components/ShoeSlider";
 import SizePickerDialog from "../components/SizePickerDialog";
 import { mapSneakerFromApi, normalizePaginatedList } from "../utils/sneakers";
+import { addToWishlist, fetchWishlistIds, removeFromWishlist } from "../utils/wishlist";
 
 const DEFAULT_ORDERING = "-popularity_score";
 const PAGE_SIZE = 20;
@@ -82,6 +83,7 @@ function HomePage({ onAddToCart, cartCount }) {
   const [addingSneakerId, setAddingSneakerId] = useState(null);
   const [sizePickerSneaker, setSizePickerSneaker] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [wishlistedIds, setWishlistedIds] = useState(new Set());
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -338,6 +340,33 @@ function HomePage({ onAddToCart, cartCount }) {
     navigate(`/sneakers/${sneaker.id}`);
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    fetchWishlistIds(token).then(setWishlistedIds);
+  }, []);
+
+  const handleToggleWishlist = async (sneaker) => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    const sneakerId = sneaker.product_id ?? sneaker.id;
+    try {
+      if (wishlistedIds.has(sneakerId)) {
+        await removeFromWishlist(sneakerId, token);
+        setWishlistedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(sneakerId);
+          return next;
+        });
+      } else {
+        await addToWishlist(sneakerId, token);
+        setWishlistedIds((prev) => new Set(prev).add(sneakerId));
+      }
+    } catch {
+      // silently ignore
+    }
+  };
+
   return (
     <div className="page">
       <Navbar user={user} cartCount={cartCount} />
@@ -569,6 +598,8 @@ function HomePage({ onAddToCart, cartCount }) {
                     onAddToCart={handleAddToCart}
                     onViewDetails={handleViewDetails}
                     disabled={addingSneakerId === sneaker.id}
+                    isWishlisted={wishlistedIds.has(sneaker.product_id ?? sneaker.id)}
+                    onToggleWishlist={handleToggleWishlist}
                   />
                 ))}
               </div>

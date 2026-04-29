@@ -92,6 +92,11 @@ function Navbar({ user, cartCount = 0 }) {
             {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
           </Link>
         ) : null}
+        {isCustomer ? (
+          <Link to="/wishlist" className="nav-cart-link">
+            Wishlist
+          </Link>
+        ) : null}
 
         {userRole !== "product_manager" ? (
           <Link to="/orders" className="nav-cart-link">
