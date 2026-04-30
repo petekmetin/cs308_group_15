@@ -1,24 +1,11 @@
-// ============================================================
-// src/components/SneakerCard.jsx — Single Sneaker Card
-// ============================================================
-// A simple presentational component that displays one sneaker.
-//
-// "Presentational component" means it only handles display —
-// no API calls, no state, just receives data (props) and renders it.
-// This is a common pattern called "dumb components" — they are
-// easy to test and easy to reuse anywhere in the app.
-//
-// Props it receives:
-//   - sneaker: an object with { name, brand, price, description, accent, image }
-//
-// When a real products API is added, the same component will work
-// with live data — just pass the API data as the sneaker prop.
-// ============================================================
-
-// ============================================================
-// SneakerCard Component
-// ============================================================
-function SneakerCard({ sneaker, onAddToCart, onViewDetails, disabled = false }) {
+function SneakerCard({
+  sneaker,
+  onAddToCart,
+  onViewDetails,
+  isWishlisted = false,
+  onToggleWishlist,
+  disabled = false,
+}) {
   const { name, brand, price, description, accent, image } = sneaker;
   const hasStockInfo = typeof sneaker.is_in_stock === "boolean";
   const isOutOfStock = hasStockInfo && sneaker.is_in_stock === false;
@@ -52,6 +39,19 @@ function SneakerCard({ sneaker, onAddToCart, onViewDetails, disabled = false }) 
         )}
         {accent ? <span className="sneaker-accent-badge">{accent}</span> : null}
         {hasStockInfo ? <span className={stockClass}>{stockText}</span> : null}
+        {typeof onToggleWishlist === "function" ? (
+          <button
+            type="button"
+            className="wishlist-heart-btn card-heart-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist(sneaker);
+            }}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          >
+            {isWishlisted ? "♥" : "♡"}
+          </button>
+        ) : null}
       </div>
 
       <div className="sneaker-info">

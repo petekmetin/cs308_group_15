@@ -45,6 +45,7 @@ import CartPage   from "./pages/CartPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProductManagerDashboard from "./pages/ProductManagerDashboard";
 import SneakerDetail from "./pages/SneakerDetail";
+import WishlistPage from "./pages/WishlistPage";
 
 // ============================================================
 // PrivateRoute — A "guard" component that protects pages
@@ -314,6 +315,15 @@ function App() {
           element={
             <PrivateRoute>
               <OrdersPage cartCount={cartCount} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/wishlist"
+          element={
+            <PrivateRoute>
+              <WishlistPage cartCount={cartCount} />
             </PrivateRoute>
           }
         />
