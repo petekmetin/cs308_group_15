@@ -171,7 +171,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
             <span className="cart-summary-label">Estimated Total</span>
             <span className="cart-summary-total">{fmtCurrency(total)}</span>
 
-            <Link to={isAuthenticated ? "/home" : "/"} className="landing-secondary-btn">
+            <Link to="/home" className="landing-secondary-btn">
               Continue Shopping
             </Link>
             {isAuthenticated ? (
@@ -348,7 +348,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
             <p className="section-note">
               Add a pair from the storefront to start building your order.
             </p>
-            <Link to={isAuthenticated ? "/home" : "/"} className="landing-primary-btn">
+            <Link to="/home" className="landing-primary-btn">
               Browse Sneakers
             </Link>
           </section>

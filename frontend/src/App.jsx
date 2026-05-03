@@ -14,7 +14,8 @@
 // Routing: We use react-router-dom v6 to map URL paths to pages.
 //   /login   → LoginPage
 //   /signup  → SignupPage
-//   /        → HomePage (protected — must be logged in)
+//   /        → redirects to /home
+//   /home    → HomePage (public storefront)
 //
 // Authentication: After a successful login, we store the user's
 // JWT access token in localStorage. PrivateRoute checks for
@@ -37,7 +38,6 @@ import {
   removeGuestCartItem,
   updateGuestCartItem,
 } from "./utils/cart";
-import LandingPage from "./pages/LandingPage";
 import LoginPage  from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import HomePage   from "./pages/HomePage";
@@ -156,7 +156,12 @@ function App() {
       try {
         const response = await api.get("/api/cart/");
         setCartItems(normalizeCart(response.data));
-      } catch {
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          clearStaleAuth();
+          setCartItems(getGuestCart());
+          return;
+        }
         setCartItems([]);
       }
     };
@@ -258,25 +263,13 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes — anyone can visit these */}
-        <Route
-          path="/"
-          element={<LandingPage onAddToCart={addToCart} cartCount={cartCount} />}
-        />
+        <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/login"  element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
-        {/*
-          Protected route — only logged-in users can visit /.
-          We wrap HomePage inside PrivateRoute, which checks for
-          a valid token before rendering the page.
-        */}
         <Route
           path="/home"
-          element={
-            <PrivateRoute>
-              <HomePage onAddToCart={addToCart} cartCount={cartCount} />
-            </PrivateRoute>
-          }
+          element={<HomePage onAddToCart={addToCart} cartCount={cartCount} />}
         />
 
         <Route
@@ -290,11 +283,7 @@ function App() {
 
         <Route
           path="/sneakers/:id"
-          element={
-            <PrivateRoute>
-              <SneakerDetail onAddToCart={addToCart} cartCount={cartCount} />
-            </PrivateRoute>
-          }
+          element={<SneakerDetail onAddToCart={addToCart} cartCount={cartCount} />}
         />
 
         <Route

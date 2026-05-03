@@ -1017,7 +1017,7 @@ body {
 
 .sneaker-stock-badge {
   position: absolute;
-  right: 14px;
+  left: 14px;
   top: 14px;
   border-radius: 999px;
   padding: 6px 10px;

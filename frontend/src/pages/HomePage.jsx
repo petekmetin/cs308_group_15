@@ -139,26 +139,50 @@ function HomePage({ onAddToCart, cartCount }) {
   }, [draftFilters.search, appliedFilters.search, setSearchParams]);
 
   useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setUser(null);
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_role");
+      return undefined;
+    }
+
+    let cancelled = false;
     const cached = localStorage.getItem("user");
     if (cached) {
-      setUser(JSON.parse(cached));
+      try {
+        setUser(JSON.parse(cached));
+      } catch {
+        localStorage.removeItem("user");
+      }
     }
 
     api
       .get("/api/auth/me/")
       .then((response) => {
+        if (cancelled) {
+          return;
+        }
         setUser(response.data);
         localStorage.setItem("user", JSON.stringify(response.data));
         localStorage.setItem("user_role", response.data?.role || "");
       })
       .catch(() => {
+        if (cancelled) {
+          return;
+        }
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("user");
         localStorage.removeItem("user_role");
-        navigate("/login");
+        setUser(null);
+        window.dispatchEvent(new Event("auth-changed"));
       });
-  }, [navigate]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

@@ -23,7 +23,9 @@ function renderStars(rating) {
 function SneakerDetail({ onAddToCart, cartCount = 0 }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [user, setUser] = useState(() => getStoredUser());
+  const [user, setUser] = useState(() =>
+    localStorage.getItem("access_token") ? getStoredUser() : null
+  );
   const [sneaker, setSneaker] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +45,10 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
   const [relatedSneakers, setRelatedSneakers] = useState([]);
 
   const accessToken = localStorage.getItem("access_token") || "";
-  const userRole = useMemo(() => getStoredRole(), [user]);
+  const userRole = useMemo(() => (accessToken ? getStoredRole() : ""), [accessToken, user]);
   const canWriteReview = Boolean(accessToken) && userRole === "customer";
   const isCustomer = userRole === "customer";
+  const canShop = !accessToken || isCustomer;
 
   const refreshReviews = async () => {
     try {
@@ -59,14 +62,17 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
 
   useEffect(() => {
     if (!accessToken) {
-      navigate("/login", { replace: true });
-      return;
+      setUser(null);
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_role");
+      return undefined;
     }
     const cachedUser = getStoredUser();
     if (cachedUser) {
       setUser(cachedUser);
     }
-  }, [accessToken, navigate]);
+    return undefined;
+  }, [accessToken]);
 
   useEffect(() => {
     let mounted = true;
@@ -311,7 +317,7 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
               )}
             </div>
 
-            {isCustomer && sizes.length > 0 ? (
+            {canShop && sizes.length > 0 ? (
               <div className="detail-buy-section">
                 {sizeSystems.length > 1 ? (
                   <div className="detail-system-tabs">

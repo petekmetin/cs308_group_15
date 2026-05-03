@@ -30,6 +30,8 @@ import api from "../api";
 // ============================================================
 function Navbar({ user, cartCount = 0 }) {
   const navigate = useNavigate();
+  const accessToken = localStorage.getItem("access_token");
+  const isAuthenticated = Boolean(accessToken || user);
   const userRole = localStorage.getItem("user_role") || user?.role || "";
   const isCustomer = userRole === "customer";
   const ordersLabel = isCustomer ? "Orders" : "All Orders";
@@ -80,25 +82,42 @@ function Navbar({ user, cartCount = 0 }) {
 
       {/* Right side: username display + sign-out button */}
       <div className="nav-right">
-        {userRole === "product_manager" ? (
-          <Link to="/manager/dashboard" className="nav-manager-link">
-            Manager Dashboard
-          </Link>
-        ) : null}
-
-        {isCustomer ? (
+        {!isAuthenticated ? (
           <Link to="/cart" className="nav-cart-link">
             Cart
             {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
           </Link>
         ) : null}
-        {isCustomer ? (
-          <Link to="/wishlist" className="nav-cart-link">
-            Wishlist
+        {!isAuthenticated ? (
+          <Link to="/login" className="landing-link">
+            Log In
+          </Link>
+        ) : null}
+        {!isAuthenticated ? (
+          <Link to="/signup" className="landing-cta">
+            Create Account
           </Link>
         ) : null}
 
-        {userRole !== "product_manager" ? (
+        {isAuthenticated && userRole === "product_manager" ? (
+          <Link to="/manager/dashboard" className="nav-manager-link">
+            Manager Dashboard
+          </Link>
+        ) : null}
+
+        {isAuthenticated && isCustomer ? (
+          <>
+            <Link to="/cart" className="nav-cart-link">
+              Cart
+              {cartCount > 0 ? <span className="nav-cart-count">{cartCount}</span> : null}
+            </Link>
+            <Link to="/wishlist" className="nav-cart-link">
+              Wishlist
+            </Link>
+          </>
+        ) : null}
+
+        {isAuthenticated && userRole !== "product_manager" ? (
           <Link to="/orders" className="nav-cart-link">
             {ordersLabel}
           </Link>
@@ -109,14 +128,18 @@ function Navbar({ user, cartCount = 0 }) {
           even when user is null (while the API call is in progress).
           Shows "Loading..." as a fallback while waiting for the API.
         */}
-        <span className="nav-username">
-          {user?.username ?? "Loading..."}
-        </span>
+        {isAuthenticated ? (
+          <span className="nav-username">
+            {user?.username ?? "Loading..."}
+          </span>
+        ) : null}
 
         {/* Sign out button — triggers the logout flow */}
-        <button className="nav-logout-btn" onClick={handleLogout}>
-          Sign Out
-        </button>
+        {isAuthenticated ? (
+          <button className="nav-logout-btn" onClick={handleLogout}>
+            Sign Out
+          </button>
+        ) : null}
       </div>
     </nav>
   );
