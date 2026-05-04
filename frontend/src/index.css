@@ -2631,6 +2631,13 @@ input::placeholder {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.detail-stock-left {
+  margin-left: 0.35rem;
+  color: #aaa;
+  font-size: 0.85rem;
 }
 
 .detail-add-cart-btn {

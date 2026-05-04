@@ -255,6 +255,7 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
       : 0;
 
   const sizes = sneaker.sizes || [];
+  const selectedSize = sizes.find((s) => s.id === selectedSizeId) || null;
   const sizeSystems = [...new Set(sizes.map((s) => s.size_system))];
   const [activeSystem, sizesForSystem] = (() => {
     if (!selectedSizeId) {
@@ -379,6 +380,11 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
                   >
                     +
                   </button>
+                  {selectedSize ? (
+                    <span className="detail-stock-left">
+                      Stock left: {Number(selectedSize.stock ?? 0)}
+                    </span>
+                  ) : null}
                 </div>
 
                 <button

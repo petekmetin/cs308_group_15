@@ -13,6 +13,19 @@ function formatExpiry(raw) {
   return digits.length >= 3 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 }
 
+function formatOrderDate(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, cartCount }) {
   const navigate = useNavigate();
   const isAuthenticated = Boolean(localStorage.getItem("access_token"));
@@ -28,6 +41,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
   const [cardCvv, setCardCvv] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [invoiceOrder, setInvoiceOrder] = useState(null);
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -45,6 +59,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
   const handleAddressSubmit = (e) => {
     e.preventDefault();
     setError("");
+    setInvoiceOrder(null);
     setStep("card");
   };
 
@@ -130,15 +145,16 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
       );
 
       // ── 3) Create the order ──────────────────────────────────
-      await api.post("/api/orders/create/", {
+      const { data: order } = await api.post("/api/orders/create/", {
         delivery_address: deliveryAddress,
         credit_card_last4: digitsOnly.slice(-4),
         items: itemPayloads,
       });
 
       await onClearCart();
+      setInvoiceOrder(order);
       resetCheckoutFields();
-      navigate("/orders", { state: { justPlaced: true } });
+      setStep("invoice");
     } catch (err) {
       setError(
         err.response?.data?.reason ||
@@ -151,53 +167,146 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
     }
   };
 
+  const renderInvoiceConfirmation = () => {
+    const invoiceItems = invoiceOrder?.items || [];
+    return (
+      <section className="cart-items">
+        <article className="cart-item-card" style={{ flexDirection: "column", alignItems: "stretch" }}>
+          <header
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "1rem",
+              flexWrap: "wrap",
+              marginBottom: "1rem",
+            }}
+          >
+            <div>
+              <p className="section-kicker">Payment Confirmed</p>
+              <h1 className="welcome-title" style={{ marginBottom: "0.35rem" }}>
+                Invoice {invoiceOrder.invoice_number || `#${invoiceOrder.id}`}
+              </h1>
+              <p className="section-note">
+                Order #{invoiceOrder.id} · {formatOrderDate(invoiceOrder.created_at)}
+              </p>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span className="cart-summary-label">Total</span>
+              <p className="cart-summary-total" style={{ margin: 0 }}>
+                {fmtCurrency(invoiceOrder.total_price)}
+              </p>
+            </div>
+          </header>
+
+          <div style={{ display: "grid", gap: "0.75rem", marginBottom: "1rem" }}>
+            <p className={invoiceOrder.invoice_email_sent ? "detail-success" : "catalog-error"}>
+              {invoiceOrder.invoice_email_sent
+                ? `A PDF copy was emailed to ${invoiceOrder.customer_email || currentUser?.email}.`
+                : invoiceOrder.invoice_email_error || "Invoice email could not be sent."}
+            </p>
+            <p className="section-note" style={{ margin: 0 }}>
+              <strong>Delivery address:</strong> {invoiceOrder.delivery_address}
+            </p>
+            {invoiceOrder.credit_card_last4 ? (
+              <p className="section-note" style={{ margin: 0 }}>
+                <strong>Payment:</strong> Card ending {invoiceOrder.credit_card_last4}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="cart-items" style={{ gap: "0.75rem", marginBottom: "1rem" }}>
+            {invoiceItems.map((item) => {
+              const name =
+                item.sneaker_detail?.name ||
+                item.sneaker_detail?.brand_name ||
+                `Sneaker #${item.sneaker}`;
+              const brand = item.sneaker_detail?.brand_name;
+              const size = item.size_value
+                ? `${item.size_system} ${item.size_value}`
+                : "—";
+              return (
+                <div key={item.id} className="cart-item-card">
+                  <div className="cart-item-info">
+                    {brand ? <span className="sneaker-brand">{brand}</span> : null}
+                    <h2 className="sneaker-name">{name}</h2>
+                    <p className="sneaker-description">Size: {size}</p>
+                  </div>
+                  <div className="cart-item-actions">
+                    <p className="section-note" style={{ margin: 0 }}>
+                      Qty {item.quantity} · {fmtCurrency(item.unit_price)} each
+                    </p>
+                    <p className="cart-item-total">{fmtCurrency(item.subtotal)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Link to="/orders" className="landing-primary-btn">
+              View Your Orders
+            </Link>
+            <Link to="/home" className="landing-secondary-btn">
+              Continue Shopping
+            </Link>
+          </div>
+        </article>
+      </section>
+    );
+  };
+
   return (
     <div className="page">
       <Navbar user={currentUser} cartCount={cartCount} />
 
       <main className="home-content">
-        <section className="cart-layout">
-          <div className="cart-copy">
-            <p className="section-kicker">Your Cart</p>
-            <h1 className="welcome-title">Cart Summary</h1>
-            <p className="section-note">
-              Review your selected pairs, update quantities, or head back to the catalog.
-            </p>
-          </div>
+        {invoiceOrder ? (
+          renderInvoiceConfirmation()
+        ) : (
+          <>
+            <section className="cart-layout">
+              <div className="cart-copy">
+                <p className="section-kicker">Your Cart</p>
+                <h1 className="welcome-title">Cart Summary</h1>
+                <p className="section-note">
+                  Review your selected pairs, update quantities, or head back to the catalog.
+                </p>
+              </div>
 
-          <div className="cart-summary-card">
-            <span className="cart-summary-label">Items</span>
-            <span className="cart-summary-value">{cartCount}</span>
-            <span className="cart-summary-label">Estimated Total</span>
-            <span className="cart-summary-total">{fmtCurrency(total)}</span>
+              <div className="cart-summary-card">
+                <span className="cart-summary-label">Items</span>
+                <span className="cart-summary-value">{cartCount}</span>
+                <span className="cart-summary-label">Estimated Total</span>
+                <span className="cart-summary-total">{fmtCurrency(total)}</span>
 
-            <Link to="/home" className="landing-secondary-btn">
-              Continue Shopping
-            </Link>
-            {isAuthenticated ? (
-              <Link to="/orders" className="landing-secondary-btn">
-                View Your Orders
-              </Link>
-            ) : null}
-            {cartItems.length > 0 && step === "cart" && (
-              isAuthenticated ? (
-                <button
-                  type="button"
-                  className="landing-primary-btn"
-                  onClick={() => setStep("address")}
-                >
-                  Place Order
-                </button>
-              ) : (
-                <Link to="/login" state={{ redirectTo: "/cart" }} className="landing-primary-btn">
-                  Login to Place Order
+                <Link to="/home" className="landing-secondary-btn">
+                  Continue Shopping
                 </Link>
-              )
-            )}
-          </div>
-        </section>
+                {isAuthenticated ? (
+                  <Link to="/orders" className="landing-secondary-btn">
+                    View Your Orders
+                  </Link>
+                ) : null}
+                {cartItems.length > 0 && step === "cart" && (
+                  isAuthenticated ? (
+                    <button
+                      type="button"
+                      className="landing-primary-btn"
+                      onClick={() => setStep("address")}
+                    >
+                      Place Order
+                    </button>
+                  ) : (
+                    <Link to="/login" state={{ redirectTo: "/cart" }} className="landing-primary-btn">
+                      Login to Place Order
+                    </Link>
+                  )
+                )}
+              </div>
+            </section>
 
-        {error ? <p className="catalog-error">{error}</p> : null}
+            {error ? <p className="catalog-error">{error}</p> : null}
 
         {/* ── Step 1: Delivery address ───────────────────────────────── */}
         {step === "address" && (
@@ -415,6 +524,8 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
               </article>
             ))}
           </section>
+        )}
+          </>
         )}
       </main>
     </div>
