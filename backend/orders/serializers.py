@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+from accounts.validators import get_customer_profile_errors
 from .models import Order, OrderItem, Invoice, Delivery
 from products.serializers import SneakerListSerializer
 from products.models import Sneaker, SneakerSize
@@ -38,6 +39,13 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'delivery_address', 'credit_card_last4', 'items']
+
+    def validate(self, attrs):
+        customer = self.context['request'].user
+        profile_errors = get_customer_profile_errors(customer)
+        if profile_errors:
+            raise serializers.ValidationError(profile_errors)
+        return attrs
 
     def validate_items(self, items):
         if not items:

@@ -29,4 +29,7 @@ frontend/.vite/
 *.swp
 
 # ── Migrations are COMMITTED — do not add them here ───
-# backend/**/migrations/   ← leave this commented.claude/
+# backend/**/migrations/   ← leave this commented.
+
+# ── Local assistant workspace ─────────────────────────────────
+.claude/

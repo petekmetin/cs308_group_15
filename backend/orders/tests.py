@@ -256,6 +256,8 @@ class OrderTransactionTests(APITestCase):
             last_name='Customer',
             password='StrongPass123!',
             role='customer',
+            tax_id='TX-CUST-001',
+            home_address='1 TX Customer Home',
         )
         self.sales_manager = User.objects.create_user(
             email='tx-sales@example.com',
@@ -522,6 +524,38 @@ class OrderTransactionTests(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, 403)
 
+    def test_create_order_rejects_customer_missing_tax_id(self):
+        """Customers must complete tax ID before order creation."""
+        self.customer.tax_id = ''
+        self.customer.save(update_fields=['tax_id'])
+        self.client.force_authenticate(self.customer)
+
+        response = self.client.post('/api/orders/create/', {
+            'delivery_address': '1 Test Ave',
+            'credit_card_last4': '1234',
+            'items': [{'sneaker_id': self.sneaker.id, 'size_id': self.size.id, 'quantity': 1}],
+        }, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('tax_id', response.data)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_create_order_rejects_customer_missing_home_address(self):
+        """Customers must complete home address before order creation."""
+        self.customer.home_address = ''
+        self.customer.save(update_fields=['home_address'])
+        self.client.force_authenticate(self.customer)
+
+        response = self.client.post('/api/orders/create/', {
+            'delivery_address': '1 Test Ave',
+            'credit_card_last4': '1234',
+            'items': [{'sneaker_id': self.sneaker.id, 'size_id': self.size.id, 'quantity': 1}],
+        }, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('home_address', response.data)
+        self.assertEqual(Order.objects.count(), 0)
+
     # ── Cancel order edge cases ──────────────────────────────────────────────
 
     def test_cancel_order_rejects_non_cancellable_status(self):
@@ -618,11 +652,15 @@ class OrderRaceConditionTests(TransactionTestCase):
             email='race1@test.com', username='race1',
             first_name='Race', last_name='One',
             password='StrongPass123!', role='customer',
+            tax_id='RACE-001',
+            home_address='1 Race One Home',
         )
         self.customer2 = User.objects.create_user(
             email='race2@test.com', username='race2',
             first_name='Race', last_name='Two',
             password='StrongPass123!', role='customer',
+            tax_id='RACE-002',
+            home_address='2 Race Two Home',
         )
         brand = Brand.objects.create(name='Race Brand', slug='race-brand')
         category = Category.objects.create(name='Race Cat', slug='race-cat')
@@ -692,6 +730,8 @@ class OrderCreateResponseTests(APITestCase):
             last_name='Customer',
             password='StrongPass123!',
             role='customer',
+            tax_id='INV-CUST-001',
+            home_address='1 Invoice Customer Home',
         )
         brand    = Brand.objects.create(name='Invoice Brand', slug='invoice-brand')
         category = Category.objects.create(name='Invoice Cat',  slug='invoice-cat')

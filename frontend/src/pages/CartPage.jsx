@@ -26,6 +26,11 @@ function formatOrderDate(iso) {
   });
 }
 
+function getMissingProfileFields(profile) {
+  if (!profile) return ["tax_id", "home_address"];
+  return ["tax_id", "home_address"].filter((field) => !String(profile[field] || "").trim());
+}
+
 function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, cartCount }) {
   const navigate = useNavigate();
   const isAuthenticated = Boolean(localStorage.getItem("access_token"));
@@ -42,6 +47,11 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    tax_id: currentUser?.tax_id || "",
+    home_address: currentUser?.home_address || "",
+  });
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -54,6 +64,69 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
     setCardExpiry("");
     setCardCvv("");
     setError("");
+  };
+
+  const handleStartCheckout = async () => {
+    setError("");
+    setInvoiceOrder(null);
+    setProfileLoading(true);
+    try {
+      const { data: profile } = await api.get("/api/auth/me/");
+      localStorage.setItem("user", JSON.stringify(profile));
+      const missingFields = getMissingProfileFields(profile);
+      setProfileForm({
+        tax_id: profile.tax_id || "",
+        home_address: profile.home_address || "",
+      });
+
+      if (missingFields.length) {
+        setStep("profile");
+        return;
+      }
+
+      if (!deliveryAddress.trim() && profile.home_address) {
+        setDeliveryAddress(profile.home_address);
+      }
+      setStep("address");
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          "Could not load your profile before checkout."
+      );
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setProfileLoading(true);
+
+    try {
+      const { data: profile } = await api.patch("/api/auth/me/", {
+        tax_id: profileForm.tax_id.trim(),
+        home_address: profileForm.home_address.trim(),
+      });
+      localStorage.setItem("user", JSON.stringify(profile));
+      if (!deliveryAddress.trim() && profile.home_address) {
+        setDeliveryAddress(profile.home_address);
+      }
+      setStep("address");
+    } catch (err) {
+      const data = err.response?.data;
+      if (data && typeof data === "object") {
+        const firstField = Object.keys(data)[0];
+        const firstMsg = Array.isArray(data[firstField])
+          ? data[firstField][0]
+          : data[firstField];
+        setError(`${firstField}: ${firstMsg}`);
+      } else {
+        setError("Could not update your customer profile.");
+      }
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
   const handleAddressSubmit = (e) => {
@@ -156,9 +229,19 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
       resetCheckoutFields();
       setStep("invoice");
     } catch (err) {
+      const profileErrors = err.response?.data || {};
+      if (profileErrors.tax_id || profileErrors.home_address) {
+        setProfileForm((prev) => ({
+          tax_id: prev.tax_id,
+          home_address: prev.home_address || deliveryAddress,
+        }));
+        setStep("profile");
+      }
       setError(
         err.response?.data?.reason ||
           err.response?.data?.detail ||
+          err.response?.data?.tax_id ||
+          err.response?.data?.home_address ||
           err.message ||
           "Something went wrong while placing your order."
       );
@@ -293,9 +376,10 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                     <button
                       type="button"
                       className="landing-primary-btn"
-                      onClick={() => setStep("address")}
+                      onClick={handleStartCheckout}
+                      disabled={profileLoading}
                     >
-                      Place Order
+                      {profileLoading ? "Checking Profile..." : "Place Order"}
                     </button>
                   ) : (
                     <Link to="/login" state={{ redirectTo: "/cart" }} className="landing-primary-btn">
@@ -307,6 +391,58 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
             </section>
 
             {error ? <p className="catalog-error">{error}</p> : null}
+
+        {/* ── Required customer profile fields ──────────────────────────────── */}
+        {step === "profile" && (
+          <section className="checkout-profile-card">
+            <p className="section-kicker">Customer Details</p>
+            <h2 className="section-title">Complete your profile</h2>
+            <p className="section-note">
+              Your tax ID and home address are required before a purchase can be completed.
+            </p>
+            <form className="auth-form" onSubmit={handleProfileSubmit}>
+              <div className="form-group">
+                <label htmlFor="checkout-tax-id">Tax ID</label>
+                <input
+                  id="checkout-tax-id"
+                  value={profileForm.tax_id}
+                  onChange={(event) =>
+                    setProfileForm((prev) => ({ ...prev, tax_id: event.target.value }))
+                  }
+                  required
+                  autoComplete="off"
+                  placeholder="Enter your tax ID"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="checkout-home-address">Home Address</label>
+                <textarea
+                  id="checkout-home-address"
+                  value={profileForm.home_address}
+                  onChange={(event) =>
+                    setProfileForm((prev) => ({ ...prev, home_address: event.target.value }))
+                  }
+                  required
+                  rows={3}
+                  placeholder="Enter your home address"
+                />
+              </div>
+              <div className="checkout-profile-actions">
+                <button
+                  type="button"
+                  className="landing-secondary-btn"
+                  onClick={() => { setStep("cart"); setError(""); }}
+                  disabled={profileLoading}
+                >
+                  Back to Cart
+                </button>
+                <button type="submit" className="landing-primary-btn" disabled={profileLoading}>
+                  {profileLoading ? "Saving..." : "Save and Continue"}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
 
         {/* ── Step 1: Delivery address ───────────────────────────────── */}
         {step === "address" && (
