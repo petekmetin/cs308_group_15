@@ -1,10 +1,13 @@
 import threading
+import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TransactionTestCase
+from django.core import mail
+from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
 
@@ -745,3 +748,49 @@ class OrderCreateResponseTests(APITestCase):
         self.assertEqual(r1.status_code, 201)
         self.assertEqual(r2.status_code, 201)
         self.assertNotEqual(r1.data['invoice_number'], r2.data['invoice_number'])
+
+    def test_order_create_generates_pdf_and_emails_invoice(self):
+        """Successful order creation emails a PDF invoice and stores its path."""
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(
+                MEDIA_ROOT=media_root,
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                DEFAULT_FROM_EMAIL='sales@solevault.test',
+            ):
+                response = self._place_order()
+
+                self.assertEqual(response.status_code, 201)
+                self.assertTrue(response.data['invoice_email_sent'])
+                self.assertNotIn('invoice_email_error', response.data)
+
+                invoice = Invoice.objects.get(order_id=response.data['id'])
+                self.assertTrue(invoice.pdf_path)
+                self.assertTrue(invoice.pdf_path.endswith('.pdf'))
+                self.assertTrue(os.path.exists(os.path.join(media_root, invoice.pdf_path)))
+
+                self.assertEqual(len(mail.outbox), 1)
+                message = mail.outbox[0]
+                self.assertEqual(message.to, [self.customer.email])
+                self.assertIn(response.data['invoice_number'], message.subject)
+                self.assertEqual(len(message.attachments), 1)
+                filename, content, mimetype = message.attachments[0]
+                self.assertTrue(filename.endswith('.pdf'))
+                self.assertEqual(mimetype, 'application/pdf')
+                self.assertTrue(content.startswith(b'%PDF'))
+
+    @patch('django.core.mail.message.EmailMessage.send', side_effect=RuntimeError('SMTP unavailable'))
+    def test_order_create_still_succeeds_when_invoice_email_fails(self, _send):
+        """Email failure must not roll back payment/order success."""
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                with self.assertLogs('orders.views', level='ERROR'):
+                    response = self._place_order()
+
+                self.assertEqual(response.status_code, 201)
+                self.assertFalse(response.data['invoice_email_sent'])
+                self.assertEqual(
+                    response.data['invoice_email_error'],
+                    'Invoice email could not be sent.',
+                )
+                invoice = Invoice.objects.get(order_id=response.data['id'])
+                self.assertTrue(invoice.pdf_path)

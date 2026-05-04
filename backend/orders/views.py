@@ -1,3 +1,5 @@
+import logging
+
 from django.db import transaction
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
@@ -10,7 +12,10 @@ from .serializers import (
     OrderSerializer, OrderCreateSerializer,
     InvoiceSerializer, DeliverySerializer
 )
+from .services import email_invoice_pdf
 from config.permissions import IsCustomer, IsSalesManager, IsProductManager
+
+logger = logging.getLogger(__name__)
 
 
 class OrderListView(generics.ListAPIView):
@@ -50,6 +55,13 @@ class OrderCreateView(generics.CreateAPIView):
             data['invoice_number'] = order.invoice.invoice_number
         except Exception:
             data['invoice_number'] = None
+        try:
+            email_invoice_pdf(order.invoice)
+            data['invoice_email_sent'] = True
+        except Exception:
+            logger.exception('Invoice email failed for order %s', order.id)
+            data['invoice_email_sent'] = False
+            data['invoice_email_error'] = 'Invoice email could not be sent.'
         return Response(data, status=status.HTTP_201_CREATED)
 
 
