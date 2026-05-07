@@ -1106,6 +1106,13 @@ body {
   font-weight: 700;
 }
 
+.sneaker-rating-line {
+  margin: 0;
+  color: #ffd27a;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .sneaker-description {
   font-size:   0.85rem;
   color:       var(--text-dim);
@@ -2565,6 +2572,70 @@ input::placeholder {
 
 .detail-rating-text {
   color: #999;
+}
+
+.detail-disclosure {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.detail-disclosure-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detail-disclosure-toggle:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.detail-disclosure-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.detail-product-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.detail-product-meta-grid p {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.detail-product-meta-grid strong {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detail-product-meta-grid span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 0.84rem;
 }
 
 .detail-price-row {

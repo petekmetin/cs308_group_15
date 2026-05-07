@@ -143,6 +143,7 @@ class Delivery(models.Model):
     """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('processing', 'Processing'),
         ('in_transit', 'In Transit'),
         ('delivered', 'Delivered'),
         ('failed', 'Failed'),
@@ -156,7 +157,7 @@ class Delivery(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='pending'
+        default='processing'
     )
     tracking_number = models.CharField(max_length=100, blank=True)
     delivery_address = models.TextField()

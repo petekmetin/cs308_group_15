@@ -76,6 +76,22 @@ function SignupPage() {
       // Django returns: { user: {...}, access: "...", refresh: "..." }
       const { user, access, refresh } = response.data;
 
+      if (redirectTo === "/cart") {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("user_role");
+        window.dispatchEvent(new Event("auth-changed"));
+        navigate("/login", {
+          replace: true,
+          state: {
+            redirectTo: "/cart",
+            message: "Account created. Please log in to complete your purchase.",
+          },
+        });
+        return;
+      }
+
       // Store tokens so the user stays logged in across page refreshes
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);

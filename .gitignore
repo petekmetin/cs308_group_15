@@ -8,7 +8,7 @@ backend/venv/
 *.mo
 
 # ── Django ─────────────────────────────────────────────
-# backend/.env
+backend/.env
 backend/db.sqlite3
 backend/staticfiles/
 
@@ -33,3 +33,4 @@ frontend/.vite/
 
 # ── Local assistant workspace ─────────────────────────────────
 .claude/
+

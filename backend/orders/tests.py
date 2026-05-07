@@ -74,7 +74,7 @@ class DeliveryEndpointsTests(APITestCase):
         )
         self.delivery = Delivery.objects.create(
             order=self.order,
-            status='pending',
+            status='processing',
             delivery_address=self.order.delivery_address,
             is_completed=False,
         )
@@ -96,7 +96,7 @@ class DeliveryEndpointsTests(APITestCase):
 
         self.assertEqual(row['id'], self.delivery.id)
         self.assertEqual(row['delivery_address'], self.order.delivery_address)
-        self.assertEqual(row['status'], 'pending')
+        self.assertEqual(row['status'], 'processing')
         self.assertFalse(row['is_completed'])
         self.assertEqual(row['order']['id'], self.order.id)
         self.assertEqual(row['order']['customer'], self.customer_user.id)
@@ -109,6 +109,14 @@ class DeliveryEndpointsTests(APITestCase):
     def test_delivery_patch_updates_status_and_marks_completed_on_delivered(self):
         pm_client = self.client_class()
         pm_client.force_authenticate(self.pm_user)
+
+        processing = pm_client.patch(
+            f'/api/orders/deliveries/{self.delivery.id}/',
+            {'status': 'processing'},
+            format='json',
+        )
+        self.assertEqual(processing.status_code, 200)
+        self.assertEqual(processing.data['status'], 'processing')
 
         in_transit = pm_client.patch(
             f'/api/orders/deliveries/{self.delivery.id}/',
@@ -330,10 +338,12 @@ class OrderTransactionTests(APITestCase):
 
         self.assertEqual(response.status_code, 201)
         order_id = response.data['id']
+        self.assertEqual(response.data['status'], 'processing')
         self.size.refresh_from_db()
         self.assertEqual(self.size.stock, initial_stock - 2)
         self.assertTrue(Invoice.objects.filter(order_id=order_id).exists())
-        self.assertTrue(Delivery.objects.filter(order_id=order_id).exists())
+        delivery = Delivery.objects.get(order_id=order_id)
+        self.assertEqual(delivery.status, 'processing')
 
     def test_create_order_rollback_restores_stock_and_removes_order(self):
         """Crash creating Delivery rolls back Order, OrderItems, and stock deduction."""
@@ -767,8 +777,12 @@ class OrderCreateResponseTests(APITestCase):
         response = self._place_order()
         self.assertEqual(response.status_code, 201)
         for field in ('id', 'total_price', 'delivery_address', 'credit_card_last4',
-                      'items', 'created_at', 'status', 'invoice_number'):
+                      'items', 'created_at', 'status', 'invoice_number',
+                      'delivery_status', 'delivery_status_label'):
             self.assertIn(field, response.data, msg=f"Missing field: {field}")
+        self.assertEqual(response.data['status'], 'processing')
+        self.assertEqual(response.data['delivery_status'], 'processing')
+        self.assertEqual(response.data['delivery_status_label'], 'Processing')
 
     def test_response_items_include_subtotals(self):
         """Each line item in the response must expose subtotal for invoice rendering."""

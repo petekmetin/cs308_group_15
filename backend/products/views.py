@@ -368,6 +368,7 @@ class ReviewListView(generics.ListAPIView):
                 sneaker_id=self.kwargs['pk'],
                 status='approved'
             )
+            .exclude(comment='')
             .select_related('customer')
             .order_by('-created_at')
         )
@@ -382,12 +383,44 @@ class ReviewCreateView(generics.CreateAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [IsCustomer]
 
-    def perform_create(self, serializer):
-        sneaker = Sneaker.objects.get(pk=self.kwargs['pk'])
-        serializer.save(
-            customer=self.request.user,
+    def create(self, request, *args, **kwargs):
+        try:
+            sneaker = Sneaker.objects.get(pk=self.kwargs['pk'])
+        except Sneaker.DoesNotExist:
+            return Response({'detail': 'Sneaker not found.'}, status=404)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        rating = serializer.validated_data['rating']
+        comment = serializer.validated_data.get('comment', '').strip()
+
+        review, created = Review.objects.get_or_create(
             sneaker=sneaker,
-            status='pending',
+            customer=request.user,
+            defaults={
+                'rating': rating,
+                'comment': comment,
+                'status': 'pending' if comment else 'approved',
+            },
+        )
+
+        if not created:
+            review.rating = rating
+            update_fields = ['rating', 'updated_at']
+            if comment:
+                review.comment = comment
+                review.status = 'pending'
+                update_fields.extend(['comment', 'status'])
+            elif not review.comment:
+                review.status = 'approved'
+                update_fields.append('status')
+            review.save(update_fields=update_fields)
+
+        response_serializer = self.get_serializer(review)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
 

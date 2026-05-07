@@ -32,6 +32,7 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
   const [error, setError] = useState("");
   const [reviewsError, setReviewsError] = useState("");
   const [reviewsOpen, setReviewsOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const [selectedSizeId, setSelectedSizeId] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -52,8 +53,12 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
 
   const refreshReviews = async () => {
     try {
-      const payload = await fetchJson(`/api/products/sneakers/${id}/reviews/`);
-      setReviews(normalizeList(payload));
+      const [sneakerPayload, reviewsPayload] = await Promise.all([
+        fetchJson(`/api/products/sneakers/${id}/`),
+        fetchJson(`/api/products/sneakers/${id}/reviews/`),
+      ]);
+      setSneaker(sneakerPayload);
+      setReviews(normalizeList(reviewsPayload));
       setReviewsError("");
     } catch (err) {
       setReviewsError(err.message || "Could not refresh reviews.");
@@ -249,10 +254,8 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
   const hasDiscount =
     sneaker.discounted_price && sneaker.discounted_price !== sneaker.price;
 
-  const averageRating =
-    reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / reviews.length
-      : 0;
+  const ratingCount = Number(sneaker.rating_count ?? reviews.length ?? 0);
+  const averageRating = Number(sneaker.average_rating ?? 0);
 
   const sizes = sneaker.sizes || [];
   const selectedSize = sizes.find((s) => s.id === selectedSizeId) || null;
@@ -296,14 +299,62 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
             <p className="review-product-brand">{sneaker.brand?.name || "Unknown brand"}</p>
             <h1>{sneaker.name}</h1>
 
-            {reviews.length > 0 ? (
+            {ratingCount > 0 ? (
               <p className="detail-rating">
                 <span className="detail-rating-stars">{renderStars(Math.round(averageRating))}</span>
                 <span className="detail-rating-text">
-                  {averageRating.toFixed(1)} · {reviews.length} review{reviews.length === 1 ? "" : "s"}
+                  {averageRating.toFixed(1)} · {ratingCount} rating{ratingCount === 1 ? "" : "s"}
                 </span>
               </p>
             ) : null}
+
+            <div className="detail-disclosure">
+              <button
+                type="button"
+                className="detail-disclosure-toggle"
+                onClick={() => setDetailsOpen((prev) => !prev)}
+                aria-expanded={detailsOpen}
+                aria-controls="sneaker-product-details"
+              >
+                <span>Details</span>
+                <span className={`review-chevron ${detailsOpen ? "open" : ""}`} aria-hidden="true">
+                  ▾
+                </span>
+              </button>
+
+              {detailsOpen ? (
+                <div className="detail-product-meta-grid" id="sneaker-product-details">
+                  <p>
+                    <strong>ID</strong>
+                    <span>#{sneaker.id}</span>
+                  </p>
+                  <p>
+                    <strong>Model</strong>
+                    <span>{sneaker.model_number || "-"}</span>
+                  </p>
+                  <p>
+                    <strong>Category</strong>
+                    <span>{sneaker.category?.name || "-"}</span>
+                  </p>
+                  <p>
+                    <strong>SKU</strong>
+                    <span>{sneaker.sku || "-"}</span>
+                  </p>
+                  <p>
+                    <strong>Serial</strong>
+                    <span>{sneaker.serial_number || "-"}</span>
+                  </p>
+                  <p>
+                    <strong>Colorway</strong>
+                    <span>{sneaker.colorway || "-"}</span>
+                  </p>
+                  <p>
+                    <strong>Warranty</strong>
+                    <span>{sneaker.warranty_status || "-"}</span>
+                  </p>
+                </div>
+              ) : null}
+            </div>
 
             <p className="review-product-description">{sneaker.description || sneaker.colorway}</p>
 

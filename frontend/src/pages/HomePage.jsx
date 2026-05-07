@@ -108,36 +108,6 @@ function HomePage({ onAddToCart, cartCount }) {
     setDraftFilters(appliedFilters);
   }, [appliedFilters]);
 
-  // ── Live search (debounced) ─────────────────────────────────────────
-  // When the user types (or deletes) in the search box, push the change to
-  // the URL after a short pause. Other filter fields (price / brand /
-  // category / size) still require the Apply button because they are
-  // checkbox / select inputs where every change shouldn't auto-refetch.
-  useEffect(() => {
-    const draftSearch = draftFilters.search.trim();
-    const appliedSearch = appliedFilters.search.trim();
-
-    if (draftSearch === appliedSearch) {
-      return undefined;
-    }
-
-    const timer = setTimeout(() => {
-      setSearchParams((currentParams) => {
-        const nextParams = new URLSearchParams(currentParams);
-        if (draftSearch) {
-          nextParams.set("search", draftSearch);
-        } else {
-          nextParams.delete("search");
-        }
-        // Any search change resets us back to the first page.
-        nextParams.delete("page");
-        return nextParams;
-      });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [draftFilters.search, appliedFilters.search, setSearchParams]);
-
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) {

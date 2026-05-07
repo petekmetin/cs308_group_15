@@ -6,10 +6,22 @@ function SneakerCard({
   onToggleWishlist,
   disabled = false,
 }) {
-  const { name, brand, price, description, accent, image } = sneaker;
+  const {
+    name,
+    brand,
+    price,
+    description,
+    accent,
+    image,
+    averageRating,
+    ratingCount,
+  } = sneaker;
   const hasStockInfo = typeof sneaker.is_in_stock === "boolean";
   const isOutOfStock = hasStockInfo && sneaker.is_in_stock === false;
   const numericStock = Number(sneaker.total_stock ?? 0);
+  const safeRatingCount = Number(ratingCount || 0);
+  const ratingValue = Number(averageRating || 0);
+  const roundedRating = Math.max(0, Math.min(5, Math.round(ratingValue)));
   const stockText = isOutOfStock
     ? "Out of Stock"
     : numericStock > 0 && numericStock <= 5
@@ -57,6 +69,11 @@ function SneakerCard({
       <div className="sneaker-info">
         <span className="sneaker-brand">{brand}</span>
         <h3 className="sneaker-name">{name}</h3>
+        <p className="sneaker-rating-line">
+          {safeRatingCount > 0
+            ? `${"★".repeat(roundedRating)}${"☆".repeat(5 - roundedRating)} ${ratingValue.toFixed(1)}`
+            : "☆☆☆☆☆"}
+        </p>
         <p className="sneaker-description">{description}</p>
         <div className="sneaker-footer">
           <span className="sneaker-price">{formattedPrice}</span>

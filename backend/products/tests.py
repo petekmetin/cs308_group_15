@@ -2,6 +2,7 @@ import tempfile
 from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from PIL import Image
@@ -153,6 +154,59 @@ class SneakerListApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn({'size_system': 'US', 'size': '10'}, response.data)
         self.assertIn({'size_system': 'US', 'size': '9'}, response.data)
+
+    def test_list_payload_exposes_demo_product_metadata_and_review_summary(self):
+        Review.objects.create(
+            sneaker=self.air,
+            customer=get_user_model().objects.create_user(
+                email='rating@example.com',
+                username='rating_user',
+                first_name='Rating',
+                last_name='User',
+                password='StrongPass123!',
+                role='customer',
+            ),
+            rating=5,
+            comment='Visible catalog comment',
+            status='approved',
+        )
+
+        response = self.client.get(f'/api/products/sneakers/?search={self.air.name}')
+        self.assertEqual(response.status_code, 200)
+        row = response.data['results'][0]
+
+        self.assertEqual(row['id'], self.air.id)
+        self.assertEqual(row['model_number'], self.air.model_number)
+        self.assertEqual(row['category_name'], self.category_running.name)
+        self.assertEqual(row['average_rating'], 5.0)
+        self.assertEqual(row['rating_count'], 1)
+        self.assertEqual(row['latest_approved_comment'], 'Visible catalog comment')
+
+
+class DemoFlowCommandTests(APITestCase):
+    def test_prepare_demo_flow_creates_deterministic_stock_examples_idempotently(self):
+        call_command('prepare_demo_flow')
+        call_command('prepare_demo_flow')
+
+        products = {
+            sneaker.sku: sneaker
+            for sneaker in Sneaker.objects.filter(
+                sku__in=['DEMO-PRODUCT-A', 'DEMO-PRODUCT-B', 'DEMO-PRODUCT-C']
+            ).prefetch_related('sizes')
+        }
+
+        self.assertEqual(set(products), {'DEMO-PRODUCT-A', 'DEMO-PRODUCT-B', 'DEMO-PRODUCT-C'})
+        self.assertEqual(products['DEMO-PRODUCT-A'].total_stock, 0)
+        self.assertFalse(products['DEMO-PRODUCT-A'].is_in_stock)
+        self.assertEqual(products['DEMO-PRODUCT-B'].total_stock, 1)
+        self.assertTrue(products['DEMO-PRODUCT-B'].is_in_stock)
+        self.assertGreater(products['DEMO-PRODUCT-C'].total_stock, 1)
+        self.assertTrue(products['DEMO-PRODUCT-C'].is_in_stock)
+
+        self.assertEqual(
+            SneakerSize.objects.filter(sneaker__sku__in=products.keys()).count(),
+            3,
+        )
 
 
 class ProductManagerWorkflowApiTests(APITestCase):
@@ -543,6 +597,116 @@ class ProductManagerWorkflowApiTests(APITestCase):
         self.assertEqual(public_reviews.status_code, 200)
         public_review_ids = {row['id'] for row in public_reviews.data.get('results', public_reviews.data)}
         self.assertIn(review_id, public_review_ids)
+
+    def test_rating_is_immediate_but_comments_require_moderation(self):
+        review_sneaker = Sneaker.objects.create(
+            brand=self.brand,
+            category=self.category,
+            name='Review Flow Trainer',
+            model_number='RFT-001',
+            colorway='Blue/White',
+            sku='SKU-RFT-001',
+            serial_number='SER-RFT-001',
+            description='Review flow test shoe.',
+            price='120.00',
+            is_active=True,
+        )
+        SneakerSize.objects.create(
+            sneaker=review_sneaker,
+            size_system='US',
+            size='9',
+            stock=3,
+        )
+
+        customer_client = self.client_class()
+        customer_client.force_authenticate(self.customer_user)
+
+        rating_response = customer_client.post(
+            f'/api/products/sneakers/{review_sneaker.id}/reviews/create/',
+            {'rating': 5},
+            format='json',
+        )
+        self.assertEqual(rating_response.status_code, 201)
+
+        detail_after_rating = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/')
+        self.assertEqual(detail_after_rating.status_code, 200)
+        self.assertEqual(detail_after_rating.data['average_rating'], 5.0)
+        self.assertEqual(detail_after_rating.data['rating_count'], 1)
+
+        public_reviews = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/reviews/')
+        self.assertEqual(public_reviews.status_code, 200)
+        self.assertEqual(public_reviews.data.get('results', public_reviews.data), [])
+
+        comment_response = customer_client.post(
+            f'/api/products/sneakers/{review_sneaker.id}/reviews/create/',
+            {'rating': 4, 'comment': 'Needs moderation first'},
+            format='json',
+        )
+        self.assertEqual(comment_response.status_code, 200)
+        self.assertEqual(comment_response.data['status'], 'pending')
+
+        detail_after_update = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/')
+        self.assertEqual(detail_after_update.data['average_rating'], 4.0)
+        self.assertEqual(detail_after_update.data['rating_count'], 1)
+
+        public_reviews = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/reviews/')
+        self.assertEqual(public_reviews.status_code, 200)
+        self.assertEqual(public_reviews.data.get('results', public_reviews.data), [])
+
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+        approve_response = pm_client.patch(
+            f'/api/products/reviews/{comment_response.data["id"]}/moderate/',
+            {'status': 'approved'},
+            format='json',
+        )
+        self.assertEqual(approve_response.status_code, 200)
+
+        public_reviews = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/reviews/')
+        self.assertEqual(public_reviews.status_code, 200)
+        rows = public_reviews.data.get('results', public_reviews.data)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['comment'], 'Needs moderation first')
+
+    def test_rejected_comment_stays_hidden_while_rating_remains_counted(self):
+        review_sneaker = Sneaker.objects.create(
+            brand=self.brand,
+            category=self.category,
+            name='Rejected Comment Trainer',
+            model_number='RCT-001',
+            colorway='Grey',
+            sku='SKU-RCT-001',
+            serial_number='SER-RCT-001',
+            description='Rejected comment flow test shoe.',
+            price='125.00',
+            is_active=True,
+        )
+
+        customer_client = self.client_class()
+        customer_client.force_authenticate(self.customer_user)
+        create_response = customer_client.post(
+            f'/api/products/sneakers/{review_sneaker.id}/reviews/create/',
+            {'rating': 3, 'comment': 'Do not publish this'},
+            format='json',
+        )
+        self.assertEqual(create_response.status_code, 201)
+
+        pm_client = self.client_class()
+        pm_client.force_authenticate(self.pm_user)
+        reject_response = pm_client.patch(
+            f'/api/products/reviews/{create_response.data["id"]}/moderate/',
+            {'status': 'rejected'},
+            format='json',
+        )
+        self.assertEqual(reject_response.status_code, 200)
+
+        detail = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/')
+        self.assertEqual(detail.data['average_rating'], 3.0)
+        self.assertEqual(detail.data['rating_count'], 1)
+
+        public_reviews = self.client.get(f'/api/products/sneakers/{review_sneaker.id}/reviews/')
+        self.assertEqual(public_reviews.status_code, 200)
+        self.assertEqual(public_reviews.data.get('results', public_reviews.data), [])
 
 
 class SalesManagerPricingApiTests(APITestCase):

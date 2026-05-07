@@ -79,7 +79,11 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         items_data = validated_data.pop('items')
         customer = self.context['request'].user
 
-        order = Order.objects.create(customer=customer, **validated_data)
+        order = Order.objects.create(
+            customer=customer,
+            status='processing',
+            **validated_data,
+        )
 
         total = 0
         for item_data in items_data:
@@ -129,6 +133,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         # Auto-create delivery record
         Delivery.objects.create(
             order=order,
+            status='processing',
             delivery_address=order.delivery_address
         )
 
@@ -140,6 +145,8 @@ class OrderSerializer(serializers.ModelSerializer):
     customer_email = serializers.CharField(source='customer.email', read_only=True)
     invoice_number = serializers.SerializerMethodField()
     delivery_id = serializers.SerializerMethodField()
+    delivery_status = serializers.SerializerMethodField()
+    delivery_status_label = serializers.SerializerMethodField()
     delivery_is_completed = serializers.SerializerMethodField()
 
     class Meta:
@@ -147,7 +154,8 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'customer', 'customer_email', 'status',
             'total_price', 'delivery_address', 'credit_card_last4',
-            'invoice_number', 'delivery_id', 'delivery_is_completed',
+            'invoice_number', 'delivery_id', 'delivery_status',
+            'delivery_status_label', 'delivery_is_completed',
             'items', 'refund_requested_at', 'refund_approved_at', 'refund_amount',
             'created_at', 'updated_at'
         ]
@@ -168,6 +176,18 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_delivery_is_completed(self, obj):
         try:
             return bool(obj.delivery.is_completed)
+        except ObjectDoesNotExist:
+            return None
+
+    def get_delivery_status(self, obj):
+        try:
+            return obj.delivery.status
+        except ObjectDoesNotExist:
+            return None
+
+    def get_delivery_status_label(self, obj):
+        try:
+            return obj.delivery.get_status_display()
         except ObjectDoesNotExist:
             return None
 

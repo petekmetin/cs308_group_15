@@ -217,7 +217,7 @@ def update_delivery(request, pk):
     except Delivery.DoesNotExist:
         return Response({'detail': 'Not found.'}, status=404)
 
-    allowed_statuses = {'pending', 'in_transit', 'delivered', 'failed'}
+    allowed_statuses = {'pending', 'processing', 'in_transit', 'delivered', 'failed'}
     new_status = request.data.get('status')
     if new_status is not None and new_status not in allowed_statuses:
         return Response({'detail': 'Invalid status.'}, status=400)
@@ -241,6 +241,14 @@ def update_delivery(request, pk):
             return Response({'detail': 'Invalid is_completed value.'}, status=400)
 
     with transaction.atomic():
+        if delivery.status in {'processing', 'in_transit'}:
+            delivery.is_completed = False
+            delivery.delivered_at = None
+            delivery.order.status = 'processing'
+            delivery.order.save(update_fields=['status'])
+            if delivery.status == 'in_transit' and delivery.dispatched_at is None:
+                delivery.dispatched_at = timezone.now()
+
         if delivery.status == 'delivered':
             delivery.is_completed = True
             delivery.delivered_at = timezone.now()

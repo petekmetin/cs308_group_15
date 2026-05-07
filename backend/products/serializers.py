@@ -114,15 +114,20 @@ class SneakerListSerializer(serializers.ModelSerializer):
     discounted_price = serializers.ReadOnlyField()
     is_in_stock = serializers.ReadOnlyField()
     total_stock = serializers.ReadOnlyField()
+    average_rating = serializers.SerializerMethodField()
+    rating_count = serializers.SerializerMethodField()
+    latest_approved_comment = serializers.SerializerMethodField()
 
     class Meta:
         model = Sneaker
         fields = [
-            'id', 'name', 'description', 'colorway', 'brand_id', 'brand_name',
+            'id', 'name', 'description', 'colorway', 'model_number',
+            'brand_id', 'brand_name',
             'category_id', 'category_name',
             'sku', 'price', 'discounted_price', 'discount_percentage',
             'is_in_stock', 'total_stock', 'is_featured', 'primary_image',
-            'is_active', 'popularity_score', 'created_at'
+            'is_active', 'popularity_score', 'average_rating', 'rating_count',
+            'latest_approved_comment', 'created_at'
         ]
 
     def get_primary_image(self, obj):
@@ -131,6 +136,26 @@ class SneakerListSerializer(serializers.ModelSerializer):
             img = obj.images.first()
         request = self.context.get('request')
         return build_media_url(request, img.image if img else None)
+
+    def get_average_rating(self, obj):
+        reviews = obj.reviews.all()
+        if not reviews:
+            return None
+        total = sum(review.rating for review in reviews)
+        return round(total / len(reviews), 1)
+
+    def get_rating_count(self, obj):
+        return obj.reviews.count()
+
+    def get_latest_approved_comment(self, obj):
+        review = (
+            obj.reviews
+            .filter(status='approved')
+            .exclude(comment='')
+            .order_by('-created_at')
+            .first()
+        )
+        return review.comment if review else ''
 
 
 class SneakerDetailSerializer(serializers.ModelSerializer):
@@ -153,6 +178,7 @@ class SneakerDetailSerializer(serializers.ModelSerializer):
     total_stock = serializers.ReadOnlyField()
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
+    rating_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Sneaker
@@ -164,25 +190,29 @@ class SneakerDetailSerializer(serializers.ModelSerializer):
             'warranty_status', 'distributor_information',
             'is_active', 'is_featured', 'is_in_stock', 'total_stock',
             'popularity_score', 'view_count',
-            'average_rating', 'review_count',
+            'average_rating', 'review_count', 'rating_count',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'view_count', 'popularity_score', 'created_at', 'updated_at']
 
     def get_average_rating(self, obj):
-        approved = obj.reviews.filter(status='approved')
-        if not approved.exists():
+        reviews = obj.reviews.all()
+        if not reviews:
             return None
-        total = sum(r.rating for r in approved)
-        return round(total / approved.count(), 1)
+        total = sum(r.rating for r in reviews)
+        return round(total / len(reviews), 1)
 
     def get_review_count(self, obj):
-        return obj.reviews.filter(status='approved').count()
+        return obj.reviews.filter(status='approved').exclude(comment='').count()
+
+    def get_rating_count(self, obj):
+        return obj.reviews.count()
 
 
 class ReviewSerializer(serializers.ModelSerializer):
     sneaker_name = serializers.CharField(source='sneaker.name', read_only=True)
     customer_name = serializers.SerializerMethodField()
+    comment = serializers.CharField(allow_blank=True, required=False)
 
     class Meta:
         model = Review
@@ -191,6 +221,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             'rating', 'comment', 'status', 'created_at'
         ]
         read_only_fields = ['id', 'sneaker', 'customer', 'status', 'created_at']
+        validators = []
 
     def get_customer_name(self, obj):
         return f'{obj.customer.first_name} {obj.customer.last_name}'

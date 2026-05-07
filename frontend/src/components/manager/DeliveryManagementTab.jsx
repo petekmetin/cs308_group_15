@@ -29,7 +29,8 @@ function fmtDate(value) {
 }
 
 const DELIVERY_SECTIONS = [
-  { id: "pending", title: "Pending" },
+  { id: "processing", title: "Processing" },
+  { id: "in_transit", title: "In Transit" },
   { id: "cancelled", title: "Cancelled" },
   { id: "returned_refunded", title: "Returned/Refunded" },
   { id: "delivered", title: "Delivered" },
@@ -38,6 +39,7 @@ const DELIVERY_SECTIONS = [
 const STATUS_LABEL = {
   pending: "Pending",
   processing: "Processing",
+  in_transit: "In Transit",
   shipped: "Shipped",
   delivered: "Delivered",
   cancelled: "Cancelled",
@@ -45,8 +47,17 @@ const STATUS_LABEL = {
   returned: "Returned",
 };
 
-function mapSection(statusValue) {
-  const status = String(statusValue || "").toLowerCase();
+function getDeliveryStatus(order) {
+  return order.delivery_status || order.status;
+}
+
+function getDeliveryStatusLabel(order) {
+  const status = getDeliveryStatus(order);
+  return order.delivery_status_label || STATUS_LABEL[status] || status || "-";
+}
+
+function mapSection(order) {
+  const status = String(getDeliveryStatus(order) || "").toLowerCase();
   if (status === "cancelled") {
     return "cancelled";
   }
@@ -56,7 +67,10 @@ function mapSection(statusValue) {
   if (status === "delivered") {
     return "delivered";
   }
-  return "pending";
+  if (status === "in_transit" || status === "shipped") {
+    return "in_transit";
+  }
+  return "processing";
 }
 
 function formatProductIds(order) {
@@ -76,14 +90,15 @@ function DeliveryManagementTab({ accessToken }) {
 
   const groupedOrders = useMemo(() => {
     const groups = {
-      pending: [],
+      processing: [],
+      in_transit: [],
       cancelled: [],
       returned_refunded: [],
       delivered: [],
     };
 
     orders.forEach((order) => {
-      const key = mapSection(order.status);
+      const key = mapSection(order);
       groups[key].push(order);
     });
 
@@ -196,6 +211,7 @@ function DeliveryManagementTab({ accessToken }) {
                             <th>Qty</th>
                             <th>Total</th>
                             <th>Address</th>
+                            <th>Status</th>
                             <th>Completed</th>
                             <th>Invoice</th>
                             <th />
@@ -213,6 +229,7 @@ function DeliveryManagementTab({ accessToken }) {
                               <td>{totalQuantity(order)}</td>
                               <td>{fmtCurrency(order.total_price)}</td>
                               <td>{order.delivery_address || "—"}</td>
+                              <td>{getDeliveryStatusLabel(order)}</td>
                               <td>
                                 {order.delivery_is_completed === null
                                   ? "—"
@@ -261,7 +278,7 @@ function DeliveryManagementTab({ accessToken }) {
                 <p className="section-kicker">Selected Order</p>
                 <h3>Order #{selectedOrder.id}</h3>
                 <p className="manager-panel-note">
-                  {STATUS_LABEL[selectedOrder.status] || selectedOrder.status} ·{" "}
+                  {getDeliveryStatusLabel(selectedOrder)} ·{" "}
                   {fmtDate(selectedOrder.created_at)}
                 </p>
               </div>
@@ -286,6 +303,9 @@ function DeliveryManagementTab({ accessToken }) {
               </p>
               <p>
                 <strong>Customer ID:</strong> {selectedOrder.customer ?? "—"}
+              </p>
+              <p>
+                <strong>Delivery Status:</strong> {getDeliveryStatusLabel(selectedOrder)}
               </p>
               <p>
                 <strong>Completed:</strong>{" "}
@@ -348,9 +368,9 @@ function DeliveryManagementTab({ accessToken }) {
                     type="button"
                     className="manager-secondary-btn"
                     disabled={Boolean(updatingDeliveryStatus)}
-                    onClick={() => updateDeliveryStatus("pending")}
+                    onClick={() => updateDeliveryStatus("processing")}
                   >
-                    {updatingDeliveryStatus === "pending" ? "Saving..." : "Mark Pending"}
+                    {updatingDeliveryStatus === "processing" ? "Saving..." : "Mark Processing"}
                   </button>
                   <button
                     type="button"

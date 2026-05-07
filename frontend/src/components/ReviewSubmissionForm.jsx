@@ -8,6 +8,7 @@ function ReviewSubmissionForm({ sneakerId, accessToken, onSubmitted }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successAt, setSuccessAt] = useState(0);
+  const [lastSubmissionHadComment, setLastSubmissionHadComment] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -15,25 +16,23 @@ function ReviewSubmissionForm({ sneakerId, accessToken, onSubmitted }) {
       setError("Please choose a star rating between 1 and 5.");
       return;
     }
-    if (!comment.trim()) {
-      setError("Please write a short review comment.");
-      return;
-    }
-
     setLoading(true);
     setError("");
+    const trimmedComment = comment.trim();
     try {
       await fetchJson(`/api/products/sneakers/${sneakerId}/reviews/create/`, {
         method: "POST",
         token: accessToken,
         body: {
           rating,
-          comment: comment.trim(),
+          ...(trimmedComment ? { comment: trimmedComment } : {}),
         },
       });
+      setLastSubmissionHadComment(Boolean(trimmedComment));
       setRating(0);
       setComment("");
       setSuccessAt(Date.now());
+      setError("");
       if (typeof onSubmitted === "function") {
         onSubmitted();
       }
@@ -48,7 +47,9 @@ function ReviewSubmissionForm({ sneakerId, accessToken, onSubmitted }) {
     <form className="review-form" onSubmit={handleSubmit}>
       {successAt ? (
         <p className="review-success" key={successAt}>
-          Thanks for your review. It is now pending product-manager approval.
+          {lastSubmissionHadComment
+            ? "Thanks for your comment. It is now pending product-manager approval."
+            : "Thanks. Your rating has been added."}
         </p>
       ) : null}
       <label className="review-form-label">Your Rating</label>
@@ -73,14 +74,14 @@ function ReviewSubmissionForm({ sneakerId, accessToken, onSubmitted }) {
         id="review-comment"
         value={comment}
         onChange={(event) => setComment(event.target.value)}
-        placeholder="Share your experience with this sneaker..."
+        placeholder="Optional: share a comment for product-manager approval..."
         rows={4}
       />
 
       {error ? <p className="review-error">{error}</p> : null}
 
       <button type="submit" className="review-submit-btn" disabled={loading}>
-        {loading ? "Submitting..." : "Submit Review"}
+        {loading ? "Submitting..." : comment.trim() ? "Submit Rating and Comment" : "Submit Rating"}
       </button>
     </form>
   );
