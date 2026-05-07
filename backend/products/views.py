@@ -4,7 +4,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, ExpressionWrapper, F, DecimalField
+from django.db.models.functions import Coalesce
 
 from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Wishlist, Review
 from .querysets import sneaker_detail_queryset, sneaker_summary_queryset
@@ -102,11 +103,17 @@ class SneakerListView(generics.ListAPIView):
     # Including brand__name and category__name means typing "n" matches Nike,
     # "a" matches Adidas, "run" matches Running category, etc.
     search_fields = ['name', 'description', 'brand__name', 'category__name']
-    ordering_fields = ['price', 'popularity_score']
+    ordering_fields = ['effective_price', 'popularity_score']
     ordering = ['-popularity_score']
 
     def get_queryset(self):
         qs = sneaker_summary_queryset(Sneaker.objects.select_related('brand', 'category'))
+        qs = qs.annotate(
+            effective_price=ExpressionWrapper(
+                F('price') * (1 - Coalesce(F('discount_percentage'), 0) / 100.0),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )
 
         include_inactive = self.request.query_params.get('include_inactive') == 'true'
         user = self.request.user

@@ -446,8 +446,8 @@ function HomePage({ onAddToCart, cartCount }) {
                     }
                   >
                     <option value="-popularity_score">Popularity</option>
-                    <option value="price">Price: Low to High</option>
-                    <option value="-price">Price: High to Low</option>
+                    <option value="effective_price">Price: Low to High</option>
+                    <option value="-effective_price">Price: High to Low</option>
                   </select>
                 </div>
 
