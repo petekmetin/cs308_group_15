@@ -46,6 +46,7 @@ brands_data = [
     ('Jordan', 'jordan', 'Air Jordan brand by Nike.'),
     ('New Balance', 'new-balance', 'Fearlessly Independent.'),
     ('Puma', 'puma', 'Forever Faster.'),
+    ('Converse', 'converse', 'Shoes Are Boring. Wear Sneakers.'),
 ]
 
 brands = {}
@@ -163,6 +164,222 @@ sneakers_data = [
         'images': [
             ('https://static.nike.com/am90-black-1.jpg', True),
         ]
+    },
+    {
+        'brand': 'nike', 'category': 'lifestyle',
+        'name': 'Dunk Low Retro', 'model_number': 'DD1391-100',
+        'colorway': 'White/Black', 'sku': 'NIKE-DUNK-WB',
+        'serial_number': 'SN-NIKE-003',
+        'description': 'Created for the hardwood but taken to the streets.',
+        'price': '110.00', 'cost_price': '52.00',
+        'warranty_status': '2 years',
+        'distributor_information': 'Nike Inc.',
+        'is_featured': True,
+        'sizes': [
+            ('7', 'US', 6), ('8', 'US', 10), ('9', 'US', 14),
+            ('10', 'US', 10), ('11', 'US', 7), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'nike', 'category': 'lifestyle',
+        'name': 'Air Max 270', 'model_number': 'AH8050-002',
+        'colorway': 'Black/Anthracite', 'sku': 'NIKE-AM270-BLK',
+        'serial_number': 'SN-NIKE-004',
+        'description': "Nike's biggest Air unit yet delivers unrivalled, all-day comfort.",
+        'price': '150.00', 'cost_price': '72.00',
+        'warranty_status': '2 years',
+        'distributor_information': 'Nike Inc.',
+        'sizes': [
+            ('8', 'US', 8), ('9', 'US', 10), ('10', 'US', 9),
+            ('11', 'US', 6), ('12', 'US', 4),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'jordan', 'category': 'basketball',
+        'name': 'Air Jordan 4 Retro', 'model_number': 'FQ8138-003',
+        'colorway': 'Black/Cement Grey', 'sku': 'JRD-AJ4-BLK',
+        'serial_number': 'SN-JRD-002',
+        'description': 'The AJ4 introduced the first plastic wing eyelets on a basketball shoe.',
+        'price': '210.00', 'cost_price': '105.00',
+        'warranty_status': '2 years',
+        'distributor_information': 'Jordan Brand / Nike',
+        'is_featured': True,
+        'sizes': [
+            ('8', 'US', 4), ('9', 'US', 6), ('10', 'US', 8),
+            ('11', 'US', 5), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'jordan', 'category': 'basketball',
+        'name': 'Air Jordan 11 Retro', 'model_number': '378037-006',
+        'colorway': 'Black/Dark Concord-White', 'sku': 'JRD-AJ11-CON',
+        'serial_number': 'SN-JRD-003',
+        'description': 'Patent leather upper and translucent outsole — the most iconic Jordan ever made.',
+        'price': '220.00', 'cost_price': '110.00',
+        'warranty_status': '2 years',
+        'distributor_information': 'Jordan Brand / Nike — limited release',
+        'discount_percentage': 5,
+        'sizes': [
+            ('8', 'US', 3), ('9', 'US', 5), ('10', 'US', 6),
+            ('11', 'US', 4), ('12', 'US', 2),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'jordan', 'category': 'lifestyle',
+        'name': 'Air Jordan 3 Retro', 'model_number': 'CT8532-016',
+        'colorway': 'Black/Cement Grey-White-Fire Red', 'sku': 'JRD-AJ3-BLK',
+        'serial_number': 'SN-JRD-004',
+        'description': 'The first Jordan designed by Tinker Hatfield, featuring the iconic elephant print.',
+        'price': '200.00', 'cost_price': '98.00',
+        'warranty_status': '2 years',
+        'distributor_information': 'Jordan Brand / Nike',
+        'sizes': [
+            ('8', 'US', 5), ('9', 'US', 7), ('10', 'US', 9),
+            ('11', 'US', 6), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'adidas', 'category': 'running',
+        'name': 'Ultraboost 22', 'model_number': 'GZ0127',
+        'colorway': 'Core Black/Carbon', 'sku': 'ADI-UB22-BLK',
+        'serial_number': 'SN-ADI-002',
+        'description': 'Our most responsive running shoe, made in part with Parley Ocean Plastic.',
+        'price': '190.00', 'cost_price': '92.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Adidas AG',
+        'is_featured': True,
+        'sizes': [
+            ('7', 'US', 6), ('8', 'US', 10), ('9', 'US', 12),
+            ('10', 'US', 9), ('11', 'US', 5),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'adidas', 'category': 'lifestyle',
+        'name': 'Superstar', 'model_number': 'EG4958',
+        'colorway': 'Cloud White/Core Black', 'sku': 'ADI-SS-WHT',
+        'serial_number': 'SN-ADI-003',
+        'description': 'The shell toe original. A street icon since 1969.',
+        'price': '99.99', 'cost_price': '48.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Adidas AG',
+        'sizes': [
+            ('7', 'US', 9), ('8', 'US', 13), ('9', 'US', 11),
+            ('10', 'US', 8), ('11', 'US', 5), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'adidas', 'category': 'lifestyle',
+        'name': 'Forum Low', 'model_number': 'FY7757',
+        'colorway': 'Cloud White/Cloud White', 'sku': 'ADI-FORUM-WHT',
+        'serial_number': 'SN-ADI-004',
+        'description': 'Basketball heritage meets street style. The Forum is back.',
+        'price': '99.99', 'cost_price': '47.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Adidas AG',
+        'sizes': [
+            ('7', 'US', 7), ('8', 'US', 11), ('9', 'US', 10),
+            ('10', 'US', 8), ('11', 'US', 4),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'puma', 'category': 'lifestyle',
+        'name': 'Suede Classic XXI', 'model_number': '374915-01',
+        'colorway': 'Puma Black/Puma Team Gold', 'sku': 'PUMA-SUEDE-BLK',
+        'serial_number': 'SN-PUMA-001',
+        'description': 'The Suede has been changing the game since 1968. A true icon.',
+        'price': '75.00', 'cost_price': '35.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Puma SE',
+        'is_featured': True,
+        'sizes': [
+            ('7', 'US', 10), ('8', 'US', 14), ('9', 'US', 12),
+            ('10', 'US', 9), ('11', 'US', 6), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'puma', 'category': 'lifestyle',
+        'name': 'RS-X³ Puzzle', 'model_number': '371570-01',
+        'colorway': 'Puma White/Puma Black', 'sku': 'PUMA-RSX-WHT',
+        'serial_number': 'SN-PUMA-002',
+        'description': 'Chunky, bold, and futuristic. The RS-X brings back the 80s running aesthetic.',
+        'price': '110.00', 'cost_price': '52.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Puma SE',
+        'sizes': [
+            ('7', 'US', 8), ('8', 'US', 11), ('9', 'US', 10),
+            ('10', 'US', 7), ('11', 'US', 4),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'puma', 'category': 'lifestyle',
+        'name': 'Clyde All-Pro', 'model_number': '194039-01',
+        'colorway': 'Puma Navy/Puma Gold', 'sku': 'PUMA-CLYDE-NVY',
+        'serial_number': 'SN-PUMA-003',
+        'description': 'Named after Walt "Clyde" Frazier. Performance meets style on the hardwood.',
+        'price': '95.00', 'cost_price': '44.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Puma SE',
+        'sizes': [
+            ('8', 'US', 7), ('9', 'US', 9), ('10', 'US', 10),
+            ('11', 'US', 6), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'converse', 'category': 'lifestyle',
+        'name': 'Chuck Taylor All Star', 'model_number': 'M9160',
+        'colorway': 'Black/Black', 'sku': 'CONV-CTAS-BLK',
+        'serial_number': 'SN-CONV-001',
+        'description': 'The original basketball shoe turned cultural icon. Worn by everyone, everywhere.',
+        'price': '60.00', 'cost_price': '28.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Converse Inc. / Nike',
+        'is_featured': True,
+        'sizes': [
+            ('6', 'US', 10), ('7', 'US', 14), ('8', 'US', 16),
+            ('9', 'US', 13), ('10', 'US', 9), ('11', 'US', 6), ('12', 'US', 3),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'converse', 'category': 'lifestyle',
+        'name': 'Chuck Taylor All Star Hi', 'model_number': 'M9160C',
+        'colorway': 'Optical White', 'sku': 'CONV-CTASHI-WHT',
+        'serial_number': 'SN-CONV-002',
+        'description': 'The high-top silhouette that started it all. A timeless classic in clean white.',
+        'price': '65.00', 'cost_price': '30.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Converse Inc. / Nike',
+        'sizes': [
+            ('6', 'US', 8), ('7', 'US', 12), ('8', 'US', 15),
+            ('9', 'US', 11), ('10', 'US', 8), ('11', 'US', 5),
+        ],
+        'images': []
+    },
+    {
+        'brand': 'converse', 'category': 'skate',
+        'name': 'One Star Pro', 'model_number': '162542C',
+        'colorway': 'Black/Black-White', 'sku': 'CONV-ONESTAR-BLK',
+        'serial_number': 'SN-CONV-003',
+        'description': 'Low-profile skate shoe with suede upper and OrthoLite cushioning.',
+        'price': '70.00', 'cost_price': '33.00',
+        'warranty_status': '1 year',
+        'distributor_information': 'Converse Inc. / Nike',
+        'sizes': [
+            ('7', 'US', 9), ('8', 'US', 12), ('9', 'US', 11),
+            ('10', 'US', 8), ('11', 'US', 5), ('12', 'US', 2),
+        ],
+        'images': []
     },
 ]
 
