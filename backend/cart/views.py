@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db.models import Prefetch
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -12,11 +13,16 @@ from .serializers import (
     UpdateCartItemSerializer,
 )
 from products.models import Sneaker, SneakerSize
+from products.querysets import sneaker_summary_queryset
 
 
 def build_media_url(request, file_field):
     if not file_field:
         return ''
+    if isinstance(file_field, str):
+        if file_field.startswith(('http://', 'https://')):
+            return file_field
+        return request.build_absolute_uri(f'/media/{file_field.lstrip("/")}')
     name = getattr(file_field, 'name', '')
     if isinstance(name, str) and name.startswith(('http://', 'https://')):
         return name
@@ -28,10 +34,23 @@ def get_user_cart(user):
     return cart
 
 
+def get_user_cart_with_items(user):
+    cart_items = CartItem.objects.select_related('size').order_by('created_at', 'id')
+    cart = (
+        Cart.objects.filter(user=user)
+        .prefetch_related(Prefetch('items', queryset=cart_items))
+        .first()
+    )
+    if cart is not None:
+        return cart
+
+    cart = get_user_cart(user)
+    return Cart.objects.prefetch_related(Prefetch('items', queryset=cart_items)).get(pk=cart.pk)
+
+
 def get_active_sneaker(product_id):
     return (
-        Sneaker.objects.select_related('brand')
-        .prefetch_related('sizes', 'images')
+        sneaker_summary_queryset(Sneaker.objects.select_related('brand'))
         .get(pk=product_id, is_active=True)
     )
 
@@ -39,7 +58,7 @@ def get_active_sneaker(product_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def cart_detail(request):
-    cart = get_user_cart(request.user)
+    cart = get_user_cart_with_items(request.user)
     return Response(CartSerializer(cart).data)
 
 
@@ -108,14 +127,14 @@ def add_cart_item(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    primary_image = sneaker.images.filter(is_primary=True).first() or sneaker.images.first()
+    primary_image = getattr(sneaker, 'primary_image', None)
     effective_price = sneaker.discounted_price if sneaker.discounted_price is not None else sneaker.price
 
     product_slug = f'sneaker-{sneaker.id}'
     product_name = sneaker.name
     brand = sneaker.brand.name
     description = sneaker.description or description
-    image_url = build_media_url(request, primary_image.image) if primary_image else image_url
+    image_url = build_media_url(request, primary_image) if primary_image else image_url
     unit_price = Decimal(str(effective_price))
 
     item, created = CartItem.objects.get_or_create(
@@ -153,7 +172,7 @@ def add_cart_item(request):
         item.size = size
         item.save()
 
-    cart.refresh_from_db()
+    cart = get_user_cart_with_items(request.user)
     return Response(CartSerializer(cart).data, status=status.HTTP_201_CREATED)
 
 
@@ -183,7 +202,7 @@ def update_cart_item(request, item_id):
 
     item.quantity = new_quantity
     item.save(update_fields=['quantity', 'updated_at'])
-    cart.refresh_from_db()
+    cart = get_user_cart_with_items(request.user)
     return Response(CartSerializer(cart).data)
 
 
@@ -205,5 +224,5 @@ def delete_cart_item(request, item_id):
         return Response({'detail': 'Cart item not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     item.delete()
-    cart.refresh_from_db()
+    cart = get_user_cart_with_items(request.user)
     return Response(CartSerializer(cart).data)

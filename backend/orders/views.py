@@ -1,6 +1,7 @@
 import logging
 
 from django.db import transaction
+from django.db.models import Prefetch
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -14,8 +15,24 @@ from .serializers import (
 )
 from .services import email_invoice_pdf
 from config.permissions import IsCustomer, IsSalesManager, IsProductManager
+from products.models import Sneaker
+from products.querysets import sneaker_summary_queryset
 
 logger = logging.getLogger(__name__)
+
+
+def optimized_order_queryset():
+    return (
+        Order.objects.select_related('customer', 'invoice', 'delivery')
+        .prefetch_related(
+            Prefetch(
+                'items__sneaker',
+                queryset=sneaker_summary_queryset(
+                    Sneaker.objects.select_related('brand', 'category')
+                ),
+            )
+        )
+    )
 
 
 class OrderListView(generics.ListAPIView):
@@ -28,10 +45,7 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        base_queryset = (
-            Order.objects.select_related('customer', 'invoice', 'delivery')
-            .prefetch_related('items__sneaker')
-        )
+        base_queryset = optimized_order_queryset()
         user = self.request.user
         if user.role == 'customer':
             return base_queryset.filter(customer=user)
@@ -50,6 +64,7 @@ class OrderCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
+        order = optimized_order_queryset().get(pk=order.pk)
         data = OrderSerializer(order, context={'request': request}).data
         try:
             data['invoice_number'] = order.invoice.invoice_number
@@ -73,10 +88,7 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        base_queryset = (
-            Order.objects.select_related('customer', 'invoice', 'delivery')
-            .prefetch_related('items__sneaker')
-        )
+        base_queryset = optimized_order_queryset()
         user = self.request.user
         if user.role == 'customer':
             return base_queryset.filter(customer=user)
@@ -109,6 +121,7 @@ def cancel_order(request, pk):
 
         order.status = 'cancelled'
         order.save(update_fields=['status'])
+    order = optimized_order_queryset().get(pk=order.pk)
     return Response(OrderSerializer(order).data)
 
 
@@ -134,6 +147,7 @@ def request_refund(request, pk):
     order.status = 'return_requested'
     order.refund_requested_at = timezone.now()
     order.save(update_fields=['status', 'refund_requested_at'])
+    order = optimized_order_queryset().get(pk=order.pk)
     return Response(OrderSerializer(order).data)
 
 
@@ -162,6 +176,7 @@ def approve_refund(request, pk):
         order.refund_approved_at = timezone.now()
         order.refund_amount = order.total_price
         order.save(update_fields=['status', 'refund_approved_at', 'refund_amount'])
+    order = optimized_order_queryset().get(pk=order.pk)
     return Response(OrderSerializer(order).data)
 
 
@@ -199,7 +214,14 @@ class DeliveryListView(generics.ListAPIView):
     def get_queryset(self):
         return (
             Delivery.objects.select_related('order__customer')
-            .prefetch_related('order__items__sneaker')
+            .prefetch_related(
+                Prefetch(
+                    'order__items__sneaker',
+                    queryset=sneaker_summary_queryset(
+                        Sneaker.objects.select_related('brand', 'category')
+                    ),
+                )
+            )
             .filter(is_completed=False)
             .order_by('id')
         )

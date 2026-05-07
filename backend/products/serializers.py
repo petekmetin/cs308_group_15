@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 from .models import Brand, Category, Sneaker, SneakerSize, SneakerImage, Wishlist, Review
 
@@ -5,6 +6,15 @@ from .models import Brand, Category, Sneaker, SneakerSize, SneakerImage, Wishlis
 def build_media_url(request, file_field):
     if not file_field:
         return None
+    if isinstance(file_field, str):
+        if file_field.startswith(('http://', 'https://')):
+            return file_field
+        if request is None:
+            return file_field
+        media_url = settings.MEDIA_URL
+        if not media_url.endswith('/'):
+            media_url = f'{media_url}/'
+        return request.build_absolute_uri(f'{media_url}{file_field.lstrip("/")}')
     name = getattr(file_field, 'name', '')
     if isinstance(name, str) and name.startswith(('http://', 'https://')):
         return name
@@ -114,9 +124,11 @@ class SneakerListSerializer(serializers.ModelSerializer):
     discounted_price = serializers.ReadOnlyField()
     is_in_stock = serializers.ReadOnlyField()
     total_stock = serializers.ReadOnlyField()
-    average_rating = serializers.SerializerMethodField()
-    rating_count = serializers.SerializerMethodField()
-    latest_approved_comment = serializers.SerializerMethodField()
+    average_rating = serializers.FloatField(read_only=True, allow_null=True)
+    rating_count = serializers.IntegerField(read_only=True)
+    latest_approved_comment = serializers.CharField(
+        read_only=True, allow_blank=True, allow_null=True
+    )
 
     class Meta:
         model = Sneaker
@@ -131,31 +143,24 @@ class SneakerListSerializer(serializers.ModelSerializer):
         ]
 
     def get_primary_image(self, obj):
+        annotated_image = getattr(obj, 'primary_image', None)
+        if annotated_image:
+            request = self.context.get('request')
+            return build_media_url(request, annotated_image)
+
+        prefetched_images = getattr(obj, 'prefetched_images', None)
+        if prefetched_images is not None:
+            img = next((image for image in prefetched_images if image.is_primary), None)
+            if not img and prefetched_images:
+                img = prefetched_images[0]
+            request = self.context.get('request')
+            return build_media_url(request, img.image if img else None)
+
         img = obj.images.filter(is_primary=True).first()
         if not img:
             img = obj.images.first()
         request = self.context.get('request')
         return build_media_url(request, img.image if img else None)
-
-    def get_average_rating(self, obj):
-        reviews = obj.reviews.all()
-        if not reviews:
-            return None
-        total = sum(review.rating for review in reviews)
-        return round(total / len(reviews), 1)
-
-    def get_rating_count(self, obj):
-        return obj.reviews.count()
-
-    def get_latest_approved_comment(self, obj):
-        review = (
-            obj.reviews
-            .filter(status='approved')
-            .exclude(comment='')
-            .order_by('-created_at')
-            .first()
-        )
-        return review.comment if review else ''
 
 
 class SneakerDetailSerializer(serializers.ModelSerializer):
@@ -176,9 +181,9 @@ class SneakerDetailSerializer(serializers.ModelSerializer):
     discounted_price = serializers.ReadOnlyField()
     is_in_stock = serializers.ReadOnlyField()
     total_stock = serializers.ReadOnlyField()
-    average_rating = serializers.SerializerMethodField()
-    review_count = serializers.SerializerMethodField()
-    rating_count = serializers.SerializerMethodField()
+    average_rating = serializers.FloatField(read_only=True, allow_null=True)
+    review_count = serializers.IntegerField(read_only=True)
+    rating_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Sneaker
@@ -194,19 +199,6 @@ class SneakerDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'view_count', 'popularity_score', 'created_at', 'updated_at']
-
-    def get_average_rating(self, obj):
-        reviews = obj.reviews.all()
-        if not reviews:
-            return None
-        total = sum(r.rating for r in reviews)
-        return round(total / len(reviews), 1)
-
-    def get_review_count(self, obj):
-        return obj.reviews.filter(status='approved').exclude(comment='').count()
-
-    def get_rating_count(self, obj):
-        return obj.reviews.count()
 
 
 class ReviewSerializer(serializers.ModelSerializer):

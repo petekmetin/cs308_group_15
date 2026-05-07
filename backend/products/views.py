@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 
 from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Wishlist, Review
+from .querysets import sneaker_detail_queryset, sneaker_summary_queryset
 from .serializers import (
     BrandSerializer, CategorySerializer,
     SneakerListSerializer, SneakerDetailSerializer,
@@ -105,7 +106,7 @@ class SneakerListView(generics.ListAPIView):
     ordering = ['-popularity_score']
 
     def get_queryset(self):
-        qs = Sneaker.objects.select_related('brand', 'category')
+        qs = sneaker_summary_queryset(Sneaker.objects.select_related('brand', 'category'))
 
         include_inactive = self.request.query_params.get('include_inactive') == 'true'
         user = self.request.user
@@ -176,8 +177,10 @@ class SneakerDetailView(generics.RetrieveUpdateDestroyAPIView):
     PATCH  /api/products/sneakers/<id>/   — product manager
     DELETE /api/products/sneakers/<id>/   — product manager
     """
-    queryset = Sneaker.objects.select_related('brand', 'category').prefetch_related(
-        'sizes', 'images', 'reviews'
+    queryset = sneaker_detail_queryset(
+        Sneaker.objects.select_related('brand', 'category').prefetch_related(
+            'sizes', 'images'
+        )
     )
 
     def get_serializer_class(self):

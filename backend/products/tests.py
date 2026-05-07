@@ -4,6 +4,8 @@ from io import BytesIO
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.test import override_settings
 from PIL import Image
 from rest_framework.test import APITestCase
@@ -181,6 +183,41 @@ class SneakerListApiTests(APITestCase):
         self.assertEqual(row['average_rating'], 5.0)
         self.assertEqual(row['rating_count'], 1)
         self.assertEqual(row['latest_approved_comment'], 'Visible catalog comment')
+
+    def test_list_endpoint_keeps_query_count_small_for_review_summary(self):
+        Review.objects.create(
+            sneaker=self.air,
+            customer=get_user_model().objects.create_user(
+                email='query-check@example.com',
+                username='query_check_user',
+                first_name='Query',
+                last_name='Check',
+                password='StrongPass123!',
+                role='customer',
+            ),
+            rating=4,
+            comment='Query check comment',
+            status='approved',
+        )
+        image_buffer = BytesIO()
+        Image.new('RGB', (2, 2), color=(25, 90, 200)).save(image_buffer, format='PNG')
+        SneakerImage.objects.create(
+            sneaker=self.air,
+            image=SimpleUploadedFile(
+                'air-max.png',
+                image_buffer.getvalue(),
+                content_type='image/png',
+            ),
+            alt_text='Air Max image',
+            is_primary=True,
+            order=0,
+        )
+
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.get(f'/api/products/sneakers/?search={self.air.name}')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(captured), 3)
 
 
 class DemoFlowCommandTests(APITestCase):

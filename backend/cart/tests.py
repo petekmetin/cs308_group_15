@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APITestCase
 
 from products.models import Brand, Category, Sneaker, SneakerSize
@@ -297,3 +299,53 @@ class CartClearTests(APITestCase):
 
         other_cart.refresh_from_db()
         self.assertEqual(other_cart.items.count(), 1)
+
+
+class CartDetailQueryTests(APITestCase):
+    def setUp(self):
+        self.customer = get_user_model().objects.create_user(
+            email='detail-customer@test.com',
+            username='detail_customer',
+            first_name='Detail',
+            last_name='Customer',
+            password='StrongPass123!',
+        )
+        brand = Brand.objects.create(name='Detail Brand', slug='detail-brand')
+        category = Category.objects.create(name='Detail Cat', slug='detail-cat')
+        sneaker = Sneaker.objects.create(
+            brand=brand,
+            category=category,
+            name='Detail Shoe',
+            model_number='DET-001',
+            colorway='White',
+            sku='SKU-DET-001',
+            serial_number='SER-DET-001',
+            description='Detail test sneaker.',
+            price='120.00',
+            is_active=True,
+        )
+        size = SneakerSize.objects.create(
+            sneaker=sneaker,
+            size_system='US',
+            size='9',
+            stock=3,
+        )
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(
+            cart=cart,
+            sneaker=sneaker,
+            size=size,
+            product_slug='sneaker-10',
+            product_name='Detail Shoe',
+            brand='Detail Brand',
+            unit_price='120.00',
+            quantity=2,
+        )
+        self.client.force_authenticate(self.customer)
+
+    def test_cart_detail_reuses_prefetched_items_for_summary(self):
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.get('/api/cart/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(captured), 2)

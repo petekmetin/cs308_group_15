@@ -134,10 +134,16 @@ class Sneaker(models.Model):
     @property
     def total_stock(self):
         """Sum of stock across all sizes."""
+        annotated_total_stock = self.__dict__.get('_total_stock')
+        if annotated_total_stock is not None:
+            return annotated_total_stock
         return sum(s.stock for s in self.sizes.all())
 
     @property
     def is_in_stock(self):
+        annotated_is_in_stock = self.__dict__.get('_is_in_stock')
+        if annotated_is_in_stock is not None:
+            return annotated_is_in_stock
         return self.total_stock > 0
 
     @property
