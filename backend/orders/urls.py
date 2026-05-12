@@ -10,6 +10,8 @@ urlpatterns = [
     path('<int:pk>/approve-refund/', views.approve_refund, name='order-approve-refund'),
 
     path('invoices/', views.InvoiceListView.as_view(), name='invoice-list'),
+    path('invoices/<int:pk>/pdf/', views.invoice_pdf, name='invoice-pdf'),
+    path('reports/sales-summary/', views.sales_summary_report, name='sales-summary-report'),
     path('deliveries/', views.DeliveryListView.as_view(), name='delivery-list'),
     path('deliveries/<int:pk>/', views.update_delivery, name='delivery-update'),
 ]

@@ -1,7 +1,9 @@
 import tempfile
 from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
@@ -10,7 +12,7 @@ from django.test import override_settings
 from PIL import Image
 from rest_framework.test import APITestCase
 
-from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Review
+from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Wishlist, Review
 
 
 class SneakerListApiTests(APITestCase):
@@ -757,6 +759,22 @@ class SalesManagerPricingApiTests(APITestCase):
             password='StrongPass123!',
             role='sales_manager',
         )
+        self.product_manager = user_model.objects.create_user(
+            email='product-pricing@example.com',
+            username='product_pricing',
+            first_name='Product',
+            last_name='Manager',
+            password='StrongPass123!',
+            role='product_manager',
+        )
+        self.customer = user_model.objects.create_user(
+            email='wishlist-customer@example.com',
+            username='wishlist_customer',
+            first_name='Wishlist',
+            last_name='Customer',
+            password='StrongPass123!',
+            role='customer',
+        )
 
         brand = Brand.objects.create(name='Puma', slug='puma')
         category = Category.objects.create(name='Training', slug='training')
@@ -773,8 +791,129 @@ class SalesManagerPricingApiTests(APITestCase):
             discount_percentage='5.00',
             is_active=True,
         )
+        self.second_sneaker = Sneaker.objects.create(
+            brand=brand,
+            category=category,
+            name='Velocity Max',
+            model_number='VM-002',
+            colorway='Black/Blue',
+            sku='SKU-VM-002',
+            serial_number='SER-VM-002',
+            description='Stable training pair.',
+            price='150.00',
+            discount_percentage='0.00',
+            is_active=True,
+        )
+        Wishlist.objects.create(customer=self.customer, sneaker=self.sneaker)
+        Wishlist.objects.create(customer=self.customer, sneaker=self.second_sneaker)
 
         self.client.force_authenticate(self.sales_manager)
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='sales@solevault.test',
+    )
+    def test_sales_manager_set_price_sends_discount_email_to_wishlist_customers(self):
+        response = self.client.patch(
+            f'/api/products/sneakers/{self.sneaker.id}/set-price/',
+            {'price': '120.00', 'discount_percentage': '20.00'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['notification_count'], 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.customer.email])
+        self.assertIn(self.sneaker.name, mail.outbox[0].subject)
+        self.sneaker.refresh_from_db()
+        self.assertEqual(str(self.sneaker.discount_percentage), '20.00')
+
+    def test_set_price_rejects_non_sales_manager(self):
+        self.client.force_authenticate(self.product_manager)
+        response = self.client.patch(
+            f'/api/products/sneakers/{self.sneaker.id}/set-price/',
+            {'price': '99.00', 'discount_percentage': '10.00'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        self.client.force_authenticate(self.customer)
+        customer_response = self.client.patch(
+            f'/api/products/sneakers/{self.sneaker.id}/set-price/',
+            {'price': '99.00', 'discount_percentage': '10.00'},
+            format='json',
+        )
+        self.assertEqual(customer_response.status_code, 403)
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='sales@solevault.test',
+    )
+    def test_batch_discount_updates_products_and_reports_notification_count(self):
+        response = self.client.patch(
+            '/api/products/sneakers/batch-discount/',
+            {
+                'product_ids': [self.sneaker.id, self.second_sneaker.id],
+                'discount_percentage': '15.00',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['updated_count'], 2)
+        self.assertEqual(response.data['notification_count'], 2)
+        self.assertEqual(len(mail.outbox), 2)
+        self.sneaker.refresh_from_db()
+        self.second_sneaker.refresh_from_db()
+        self.assertEqual(str(self.sneaker.discount_percentage), '15.00')
+        self.assertEqual(str(self.second_sneaker.discount_percentage), '15.00')
+
+    def test_batch_discount_validates_empty_product_list(self):
+        response = self.client.patch(
+            '/api/products/sneakers/batch-discount/',
+            {'product_ids': [], 'discount_percentage': '15.00'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('product_ids', response.data)
+
+    def test_batch_discount_rejects_invalid_ids(self):
+        response = self.client.patch(
+            '/api/products/sneakers/batch-discount/',
+            {'product_ids': [self.sneaker.id, 999999], 'discount_percentage': '15.00'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('product_ids', response.data)
+
+    def test_batch_discount_rejects_discount_above_hundred(self):
+        response = self.client.patch(
+            '/api/products/sneakers/batch-discount/',
+            {'product_ids': [self.sneaker.id], 'discount_percentage': '101'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('discount_percentage', response.data)
+
+    @patch('products.views.send_discount_email', side_effect=RuntimeError('SMTP unavailable'))
+    def test_batch_discount_keeps_price_changes_when_notification_fails(self, _send):
+        with self.assertLogs('products.views', level='ERROR'):
+            response = self.client.patch(
+                '/api/products/sneakers/batch-discount/',
+                {'product_ids': [self.sneaker.id], 'discount_percentage': '25.00'},
+                format='json',
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['updated_count'], 1)
+        self.assertEqual(response.data['notification_count'], 0)
+        self.assertEqual(response.data['failed_notification_count'], 1)
+        self.sneaker.refresh_from_db()
+        self.assertEqual(str(self.sneaker.discount_percentage), '25.00')
 
     def test_set_price_rejects_non_numeric_discount(self):
         response = self.client.patch(

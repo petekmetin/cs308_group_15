@@ -14,6 +14,7 @@ urlpatterns = [
     path('sneakers/', views.SneakerListView.as_view(), name='sneaker-list'),
     path('sizes/options/', views.SneakerSizeOptionsView.as_view(), name='sneaker-size-options'),
     path('sneakers/create/', views.SneakerCreateView.as_view(), name='sneaker-create'),
+    path('sneakers/batch-discount/', views.batch_discount_sneakers, name='sneaker-batch-discount'),
     path('sneakers/<int:pk>/', views.SneakerDetailView.as_view(), name='sneaker-detail'),
     path('sneakers/<int:pk>/images/', views.SneakerImageCreateView.as_view(), name='sneaker-image-create'),
     path('sneaker-images/<int:pk>/', views.SneakerImageDetailView.as_view(), name='sneaker-image-detail'),

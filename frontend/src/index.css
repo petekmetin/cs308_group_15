@@ -1933,6 +1933,74 @@ input::placeholder {
   color: var(--text-dim);
 }
 
+.sales-batch-discount,
+.sales-date-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, max-content));
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sales-date-filters label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sales-batch-discount span,
+.sales-muted {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.sales-pricing-table input[type="number"] {
+  width: 110px;
+}
+
+.sales-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.sales-kpi-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.sales-kpi-card span {
+  color: var(--text-dim);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sales-kpi-card strong {
+  font-size: 1.25rem;
+}
+
+.sales-loss-text {
+  color: #ff9b9b;
+}
+
+.sales-chart-panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  min-height: 220px;
+}
+
 .manager-delivery-layout {
   display: grid;
   grid-template-columns: 1fr;
@@ -2157,6 +2225,11 @@ input::placeholder {
   }
 
   .manager-product-search {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-batch-discount,
+  .sales-date-filters {
     grid-template-columns: 1fr;
   }
 }

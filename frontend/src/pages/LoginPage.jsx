@@ -102,10 +102,17 @@ function LoginPage() {
       window.dispatchEvent(new Event("auth-changed"));
 
       const addedPendingItem = await syncPendingCartItem();
+      const roleLanding =
+        user?.role === "sales_manager"
+          ? "/sales/dashboard"
+          : user?.role === "product_manager"
+            ? "/manager/dashboard"
+            : "/home";
+      const nextPath = redirectTo === "/home" ? roleLanding : redirectTo;
 
       // Redirect to the Home page — PrivateRoute in App.jsx will now
       // see the token and allow access
-      navigate(addedPendingItem ? "/cart" : redirectTo, { replace: true });
+      navigate(addedPendingItem ? "/cart" : nextPath, { replace: true });
     } catch (err) {
       // If Django returned a 4xx/5xx status, axios throws an error.
       // We extract the error detail from the response body.

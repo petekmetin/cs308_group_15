@@ -44,6 +44,7 @@ import HomePage   from "./pages/HomePage";
 import CartPage   from "./pages/CartPage";
 import OrdersPage from "./pages/OrdersPage";
 import ProductManagerDashboard from "./pages/ProductManagerDashboard";
+import SalesManagerDashboard from "./pages/SalesManagerDashboard";
 import SneakerDetail from "./pages/SneakerDetail";
 import WishlistPage from "./pages/WishlistPage";
 
@@ -277,6 +278,15 @@ function App() {
           element={
             <PrivateRoute>
               <ProductManagerDashboard cartCount={cartCount} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/sales/dashboard"
+          element={
+            <PrivateRoute>
+              <SalesManagerDashboard cartCount={cartCount} />
             </PrivateRoute>
           }
         />

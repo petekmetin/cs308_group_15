@@ -85,6 +85,29 @@ class SneakerPriceUpdateSerializer(serializers.Serializer):
         return attrs
 
 
+class SneakerBatchDiscountSerializer(serializers.Serializer):
+    product_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+    )
+    discount_percentage = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=100,
+    )
+
+    def validate_product_ids(self, value):
+        seen = set()
+        unique_ids = []
+        for product_id in value:
+            if product_id in seen:
+                continue
+            seen.add(product_id)
+            unique_ids.append(product_id)
+        return unique_ids
+
+
 class SneakerImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
@@ -136,7 +159,8 @@ class SneakerListSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'colorway', 'model_number',
             'brand_id', 'brand_name',
             'category_id', 'category_name',
-            'sku', 'price', 'discounted_price', 'discount_percentage',
+            'sku', 'price', 'original_price', 'cost_price',
+            'discounted_price', 'discount_percentage',
             'is_in_stock', 'total_stock', 'is_featured', 'primary_image',
             'is_active', 'popularity_score', 'average_rating', 'rating_count',
             'latest_approved_comment', 'created_at'

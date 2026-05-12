@@ -848,3 +848,168 @@ class OrderCreateResponseTests(APITestCase):
                 )
                 invoice = Invoice.objects.get(order_id=response.data['id'])
                 self.assertTrue(invoice.pdf_path)
+
+
+class SalesManagerInvoiceReportTests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.sales_manager = user_model.objects.create_user(
+            email='sales-report@example.com',
+            username='sales_report',
+            first_name='Sales',
+            last_name='Report',
+            password='StrongPass123!',
+            role='sales_manager',
+        )
+        self.customer = user_model.objects.create_user(
+            email='report-customer@example.com',
+            username='report_customer',
+            first_name='Report',
+            last_name='Customer',
+            password='StrongPass123!',
+            role='customer',
+            tax_id='REPORT-001',
+            home_address='1 Report Home',
+        )
+        brand = Brand.objects.create(name='Report Brand', slug='report-brand')
+        category = Category.objects.create(name='Report Category', slug='report-category')
+        self.sneaker = Sneaker.objects.create(
+            brand=brand,
+            category=category,
+            name='Report Runner',
+            model_number='REP-001',
+            colorway='Black',
+            sku='SKU-REP-001',
+            serial_number='SER-REP-001',
+            description='Report test sneaker.',
+            price='100.00',
+            cost_price='60.00',
+            is_active=True,
+        )
+        self.size = SneakerSize.objects.create(
+            sneaker=self.sneaker,
+            size_system='US',
+            size='10',
+            stock=10,
+        )
+        self.client.force_authenticate(self.sales_manager)
+
+    def _make_order(self, *, total, quantity, unit_price, status='delivered', invoice_number='INV-REPORT'):
+        order = Order.objects.create(
+            customer=self.customer,
+            status=status,
+            total_price=total,
+            delivery_address='1 Report Street',
+            credit_card_last4='4242',
+        )
+        OrderItem.objects.create(
+            order=order,
+            sneaker=self.sneaker,
+            size=self.size,
+            quantity=quantity,
+            unit_price=unit_price,
+        )
+        invoice = Invoice.objects.create(order=order, invoice_number=invoice_number)
+        return order, invoice
+
+    def test_invoice_list_filters_by_date_range(self):
+        inside_order, inside_invoice = self._make_order(
+            total='100.00',
+            quantity=1,
+            unit_price='100.00',
+            invoice_number='INV-RANGE-IN',
+        )
+        outside_order, outside_invoice = self._make_order(
+            total='80.00',
+            quantity=1,
+            unit_price='80.00',
+            invoice_number='INV-RANGE-OUT',
+        )
+        today = timezone.now()
+        Invoice.objects.filter(id=inside_invoice.id).update(issued_at=today)
+        Invoice.objects.filter(id=outside_invoice.id).update(issued_at=today - timedelta(days=10))
+
+        response = self.client.get(
+            f'/api/orders/invoices/?from={today.date().isoformat()}&to={today.date().isoformat()}'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rows = response.data.get('results', response.data)
+        invoice_numbers = {row['invoice_number'] for row in rows}
+        self.assertIn(inside_invoice.invoice_number, invoice_numbers)
+        self.assertNotIn(outside_invoice.invoice_number, invoice_numbers)
+        self.assertEqual(inside_order.status, 'delivered')
+        self.assertEqual(outside_order.status, 'delivered')
+
+    def test_invoice_pdf_endpoint_is_sales_manager_only_and_generates_missing_pdf(self):
+        order, invoice = self._make_order(
+            total='100.00',
+            quantity=1,
+            unit_price='100.00',
+            invoice_number='INV-PDF-REPORT',
+        )
+        self.assertFalse(invoice.pdf_path)
+
+        customer_client = self.client_class()
+        customer_client.force_authenticate(self.customer)
+        denied = customer_client.get(f'/api/orders/invoices/{invoice.id}/pdf/')
+        self.assertEqual(denied.status_code, 403)
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.get(f'/api/orders/invoices/{invoice.id}/pdf/')
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response['Content-Type'], 'application/pdf')
+                self.assertTrue(response.content.startswith(b'%PDF'))
+                invoice.refresh_from_db()
+                self.assertTrue(invoice.pdf_path.endswith('.pdf'))
+                self.assertTrue(os.path.exists(os.path.join(media_root, invoice.pdf_path)))
+                self.assertEqual(order.invoice.invoice_number, invoice.invoice_number)
+
+    def test_sales_summary_computes_revenue_refunds_cost_profit_and_loss(self):
+        today = timezone.now()
+        delivered, _ = self._make_order(
+            total='200.00',
+            quantity=2,
+            unit_price='100.00',
+            status='delivered',
+            invoice_number='INV-SUMMARY-DELIVERED',
+        )
+        returned, _ = self._make_order(
+            total='50.00',
+            quantity=1,
+            unit_price='50.00',
+            status='returned',
+            invoice_number='INV-SUMMARY-RETURNED',
+        )
+        cancelled, _ = self._make_order(
+            total='90.00',
+            quantity=1,
+            unit_price='90.00',
+            status='cancelled',
+            invoice_number='INV-SUMMARY-CANCELLED',
+        )
+        Order.objects.filter(id=delivered.id).update(created_at=today)
+        Order.objects.filter(id=returned.id).update(
+            created_at=today,
+            refund_approved_at=today,
+            refund_amount='50.00',
+        )
+        Order.objects.filter(id=cancelled.id).update(created_at=today)
+
+        response = self.client.get(
+            f'/api/orders/reports/sales-summary/?from={today.date().isoformat()}&to={today.date().isoformat()}'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        totals = response.data['totals']
+        self.assertEqual(totals['revenue'], '250.00')
+        self.assertEqual(totals['refunds'], '50.00')
+        self.assertEqual(totals['cost'], '180.00')
+        self.assertEqual(totals['profit'], '20.00')
+        self.assertEqual(totals['loss'], '0.00')
+        self.assertEqual(totals['orders_count'], 2)
+        self.assertEqual(totals['units_sold'], 3)
+        self.assertEqual(len(response.data['series']), 1)
+        self.assertEqual(response.data['series'][0]['profit'], '20.00')

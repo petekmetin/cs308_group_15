@@ -1,7 +1,14 @@
 import logging
+import os
+from collections import defaultdict
+from datetime import timedelta
+from decimal import Decimal
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch
+from django.http import HttpResponse
+from django.utils.dateparse import parse_date
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -13,12 +20,37 @@ from .serializers import (
     OrderSerializer, OrderCreateSerializer,
     InvoiceSerializer, DeliverySerializer
 )
-from .services import email_invoice_pdf
+from .services import email_invoice_pdf, generate_invoice_pdf
 from config.permissions import IsCustomer, IsSalesManager, IsProductManager
 from products.models import Sneaker
 from products.querysets import sneaker_summary_queryset
 
 logger = logging.getLogger(__name__)
+
+
+def money(value):
+    amount = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+    return f'{amount:.2f}'
+
+
+def parse_report_range(request):
+    today = timezone.localdate()
+    from_raw = request.query_params.get('from')
+    to_raw = request.query_params.get('to')
+    from_date = parse_date(from_raw) if from_raw else today - timedelta(days=30)
+    to_date = parse_date(to_raw) if to_raw else today
+
+    if from_date is None or to_date is None:
+        return None, None, Response(
+            {'detail': 'Use YYYY-MM-DD dates for from and to.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if from_date > to_date:
+        return None, None, Response(
+            {'detail': 'from must be before or equal to to.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return from_date, to_date, None
 
 
 def optimized_order_queryset():
@@ -199,6 +231,128 @@ class InvoiceListView(generics.ListAPIView):
         if to_date:
             qs = qs.filter(issued_at__date__lte=to_date)
         return qs
+
+
+@api_view(['GET'])
+@permission_classes([IsSalesManager])
+def invoice_pdf(request, pk):
+    """
+    GET /api/orders/invoices/<pk>/pdf/
+    Sales managers download an invoice PDF, generating it if needed.
+    """
+    try:
+        invoice = Invoice.objects.select_related('order__customer').get(pk=pk)
+    except Invoice.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=404)
+
+    absolute_path = ''
+    if invoice.pdf_path:
+        absolute_path = os.path.join(settings.MEDIA_ROOT, invoice.pdf_path)
+    if not absolute_path or not os.path.exists(absolute_path):
+        absolute_path = generate_invoice_pdf(invoice)
+
+    with open(absolute_path, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{invoice.invoice_number}.pdf"'
+    return response
+
+
+@api_view(['GET'])
+@permission_classes([IsSalesManager])
+def sales_summary_report(request):
+    """
+    GET /api/orders/reports/sales-summary/?from=YYYY-MM-DD&to=YYYY-MM-DD
+    Revenue excludes cancelled orders. Profit subtracts product cost and approved refunds.
+    """
+    from_date, to_date, error_response = parse_report_range(request)
+    if error_response is not None:
+        return error_response
+
+    orders = (
+        Order.objects.exclude(status='cancelled')
+        .filter(created_at__date__gte=from_date, created_at__date__lte=to_date)
+        .prefetch_related('items__sneaker')
+        .order_by('created_at')
+    )
+    refunds = (
+        Order.objects.filter(
+            refund_approved_at__date__gte=from_date,
+            refund_approved_at__date__lte=to_date,
+        )
+        .exclude(refund_amount__isnull=True)
+        .order_by('refund_approved_at')
+    )
+
+    daily = defaultdict(lambda: {
+        'revenue': Decimal('0.00'),
+        'refunds': Decimal('0.00'),
+        'cost': Decimal('0.00'),
+        'orders_count': 0,
+        'units_sold': 0,
+    })
+
+    for order in orders:
+        day = timezone.localtime(order.created_at).date().isoformat()
+        daily[day]['revenue'] += Decimal(order.total_price or 0)
+        daily[day]['orders_count'] += 1
+        for item in order.items.all():
+            quantity = int(item.quantity or 0)
+            daily[day]['units_sold'] += quantity
+            daily[day]['cost'] += Decimal(item.sneaker.cost_price or 0) * quantity
+
+    for order in refunds:
+        day = timezone.localtime(order.refund_approved_at).date().isoformat()
+        daily[day]['refunds'] += Decimal(order.refund_amount or 0)
+
+    totals_raw = {
+        'revenue': Decimal('0.00'),
+        'refunds': Decimal('0.00'),
+        'cost': Decimal('0.00'),
+        'orders_count': 0,
+        'units_sold': 0,
+    }
+    series = []
+    current_day = from_date
+    while current_day <= to_date:
+        key = current_day.isoformat()
+        row = daily[key]
+        net_profit = row['revenue'] - row['refunds'] - row['cost']
+        profit = max(net_profit, Decimal('0.00'))
+        loss = max(-net_profit, Decimal('0.00'))
+        for field in totals_raw:
+            totals_raw[field] += row[field]
+        if row['orders_count'] or row['units_sold'] or row['refunds']:
+            series.append({
+                'date': key,
+                'revenue': money(row['revenue']),
+                'refunds': money(row['refunds']),
+                'cost': money(row['cost']),
+                'profit': money(profit),
+                'loss': money(loss),
+                'net_profit': money(net_profit),
+                'orders_count': row['orders_count'],
+                'units_sold': row['units_sold'],
+            })
+        current_day += timedelta(days=1)
+
+    total_net_profit = totals_raw['revenue'] - totals_raw['refunds'] - totals_raw['cost']
+    totals = {
+        'revenue': money(totals_raw['revenue']),
+        'refunds': money(totals_raw['refunds']),
+        'cost': money(totals_raw['cost']),
+        'profit': money(max(total_net_profit, Decimal('0.00'))),
+        'loss': money(max(-total_net_profit, Decimal('0.00'))),
+        'net_profit': money(total_net_profit),
+        'orders_count': totals_raw['orders_count'],
+        'units_sold': totals_raw['units_sold'],
+    }
+
+    return Response({
+        'from': from_date.isoformat(),
+        'to': to_date.isoformat(),
+        'totals': totals,
+        'series': series,
+    })
 
 
 # ─── Deliveries ───────────────────────────────────────────────────────────────

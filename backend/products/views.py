@@ -1,3 +1,7 @@
+import logging
+
+from django.conf import settings
+from django.core.mail import send_mail
 from django.db import transaction
 from rest_framework import generics, filters, serializers, status
 from rest_framework.decorators import api_view, permission_classes
@@ -14,12 +18,57 @@ from .serializers import (
     SneakerListSerializer, SneakerDetailSerializer,
     WishlistSerializer, ReviewSerializer, SneakerSizeStockSerializer,
     SneakerImageManageSerializer, SneakerPriceUpdateSerializer,
-    SneakerSizeCreateSerializer,
+    SneakerBatchDiscountSerializer, SneakerSizeCreateSerializer,
 )
 from config.permissions import IsProductManager, IsSalesManager, IsCustomer
 
 
+logger = logging.getLogger(__name__)
 PRICING_FIELDS = {'price', 'original_price', 'cost_price', 'discount_percentage'}
+
+
+def send_discount_email(customer_email, sneaker):
+    subject = f'Discount on {sneaker.name}'
+    body = (
+        f'Good news from SoleVault.\n\n'
+        f'{sneaker.brand.name} {sneaker.name} now has a '
+        f'{sneaker.discount_percentage}% discount. '
+        f'The new price is ${sneaker.discounted_price}.\n\n'
+        f'SoleVault'
+    )
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        [customer_email],
+        fail_silently=False,
+    )
+
+
+def notify_discount_watchers(sneaker):
+    if not sneaker.discount_percentage or sneaker.discount_percentage <= 0:
+        return {'notification_count': 0, 'failed_notification_count': 0}
+
+    wishlist_items = (
+        Wishlist.objects.filter(sneaker=sneaker)
+        .select_related('customer')
+        .exclude(customer__email='')
+    )
+    notified = 0
+    failed = 0
+    for item in wishlist_items:
+        try:
+            send_discount_email(item.customer.email, sneaker)
+            notified += 1
+        except Exception:
+            failed += 1
+            logger.exception(
+                'Discount notification failed for sneaker %s and customer %s',
+                sneaker.id,
+                item.customer_id,
+            )
+
+    return {'notification_count': notified, 'failed_notification_count': failed}
 
 
 def ensure_primary_image(sneaker, preferred_image_id=None):
@@ -102,7 +151,7 @@ class SneakerListView(generics.ListAPIView):
     # DRF SearchFilter defaults to case-insensitive substring (__icontains).
     # Including brand__name and category__name means typing "n" matches Nike,
     # "a" matches Adidas, "run" matches Running category, etc.
-    search_fields = ['name', 'description', 'brand__name', 'category__name']
+    search_fields = ['name', 'description', 'sku', 'model_number', 'brand__name', 'category__name']
     ordering_fields = ['effective_price', 'popularity_score']
     ordering = ['-popularity_score']
 
@@ -120,7 +169,7 @@ class SneakerListView(generics.ListAPIView):
         if not (
             include_inactive
             and getattr(user, 'is_authenticated', False)
-            and getattr(user, 'role', None) == 'product_manager'
+            and getattr(user, 'role', None) in {'product_manager', 'sales_manager'}
         ):
             qs = qs.filter(is_active=True)
 
@@ -323,12 +372,65 @@ def set_sneaker_price(request, pk):
     if update_fields:
         sneaker.save(update_fields=update_fields)
 
-    # Notify wishlist customers about discount if discount > 0
-    if sneaker.discount_percentage > 0:
-        # In production: send email or push notification here
-        pass
+    notification_summary = {'notification_count': 0, 'failed_notification_count': 0}
+    if 'discount_percentage' in validated and sneaker.discount_percentage > 0:
+        notification_summary = notify_discount_watchers(sneaker)
 
-    return Response(SneakerDetailSerializer(sneaker).data)
+    response_data = SneakerDetailSerializer(sneaker, context={'request': request}).data
+    response_data.update(notification_summary)
+    return Response(response_data)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsSalesManager])
+def batch_discount_sneakers(request):
+    """
+    PATCH /api/products/sneakers/batch-discount/
+    Body: { product_ids: [1, 2], discount_percentage: "15.00" }
+    Sales managers only.
+    """
+    serializer = SneakerBatchDiscountSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    product_ids = serializer.validated_data['product_ids']
+    discount_percentage = serializer.validated_data['discount_percentage']
+    sneakers = list(
+        Sneaker.objects.filter(id__in=product_ids)
+        .select_related('brand', 'category')
+        .prefetch_related('sizes', 'images')
+    )
+
+    found_ids = {sneaker.id for sneaker in sneakers}
+    missing_ids = [product_id for product_id in product_ids if product_id not in found_ids]
+    if missing_ids:
+        return Response(
+            {'product_ids': [f'Unknown product id(s): {", ".join(map(str, missing_ids))}.']},
+            status=400,
+        )
+
+    for sneaker in sneakers:
+        sneaker.discount_percentage = discount_percentage
+        sneaker.save(update_fields=['discount_percentage'])
+
+    notification_count = 0
+    failed_notification_count = 0
+    if discount_percentage > 0:
+        for sneaker in sneakers:
+            summary = notify_discount_watchers(sneaker)
+            notification_count += summary['notification_count']
+            failed_notification_count += summary['failed_notification_count']
+
+    return Response({
+        'updated_count': len(sneakers),
+        'notification_count': notification_count,
+        'failed_notification_count': failed_notification_count,
+        'products': SneakerListSerializer(
+            sneakers,
+            many=True,
+            context={'request': request},
+        ).data,
+    })
 
 
 # ─── Wishlist ─────────────────────────────────────────────────────────────────

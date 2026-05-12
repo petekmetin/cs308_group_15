@@ -105,6 +105,12 @@ function Navbar({ user, cartCount = 0 }) {
           </Link>
         ) : null}
 
+        {isAuthenticated && userRole === "sales_manager" ? (
+          <Link to="/sales/dashboard" className="nav-manager-link">
+            Sales Dashboard
+          </Link>
+        ) : null}
+
         {isAuthenticated && isCustomer ? (
           <>
             <Link to="/cart" className="nav-cart-link">
