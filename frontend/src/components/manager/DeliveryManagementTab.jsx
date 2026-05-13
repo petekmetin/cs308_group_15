@@ -31,9 +31,10 @@ function fmtDate(value) {
 const DELIVERY_SECTIONS = [
   { id: "processing", title: "Processing" },
   { id: "in_transit", title: "In Transit" },
+  { id: "delivered", title: "Delivered" },
+  { id: "failed", title: "Failed" },
   { id: "cancelled", title: "Cancelled" },
   { id: "returned_refunded", title: "Returned/Refunded" },
-  { id: "delivered", title: "Delivered" },
 ];
 
 const STATUS_LABEL = {
@@ -42,6 +43,7 @@ const STATUS_LABEL = {
   in_transit: "In Transit",
   shipped: "Shipped",
   delivered: "Delivered",
+  failed: "Failed",
   cancelled: "Cancelled",
   return_requested: "Return Requested",
   returned: "Returned",
@@ -67,6 +69,9 @@ function mapSection(order) {
   if (status === "delivered") {
     return "delivered";
   }
+  if (status === "failed") {
+    return "failed";
+  }
   if (status === "in_transit" || status === "shipped") {
     return "in_transit";
   }
@@ -81,8 +86,27 @@ function totalQuantity(order) {
   return (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 }
 
+function mapDeliveryRow(delivery) {
+  const order = delivery.order || {};
+  return {
+    id: order.id,
+    customer: order.customer,
+    total_price: order.total_price,
+    items: order.items || [],
+    status: order.status,
+    created_at: order.created_at,
+    invoice_number: delivery.invoice_number || order.invoice_number,
+    delivery_id: delivery.id,
+    delivery_status: delivery.status,
+    delivery_status_label: STATUS_LABEL[delivery.status] || delivery.status,
+    delivery_is_completed: delivery.is_completed,
+    delivery_address: delivery.delivery_address,
+  };
+}
+
 function DeliveryManagementTab({ accessToken }) {
   const [orders, setOrders] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("processing");
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -95,6 +119,7 @@ function DeliveryManagementTab({ accessToken }) {
       cancelled: [],
       returned_refunded: [],
       delivered: [],
+      failed: [],
     };
 
     orders.forEach((order) => {
@@ -105,6 +130,16 @@ function DeliveryManagementTab({ accessToken }) {
     return groups;
   }, [orders]);
 
+  const filteredOrders = groupedOrders[activeFilter] || [];
+
+  const counts = useMemo(() => {
+    const result = {};
+    DELIVERY_SECTIONS.forEach((section) => {
+      result[section.id] = groupedOrders[section.id]?.length || 0;
+    });
+    return result;
+  }, [groupedOrders]);
+
   const selectedOrder = useMemo(
     () => orders.find((order) => order.id === selectedOrderId) || null,
     [orders, selectedOrderId]
@@ -114,8 +149,8 @@ function DeliveryManagementTab({ accessToken }) {
     setLoading(true);
     setError("");
     try {
-      const payload = await fetchJson("/api/orders/", { token: accessToken });
-      const list = normalizeList(payload);
+      const payload = await fetchJson("/api/orders/deliveries/", { token: accessToken });
+      const list = normalizeList(payload).map(mapDeliveryRow);
       setOrders(list);
       setSelectedOrderId((prev) => {
         if (prev && list.some((order) => order.id === prev)) {
@@ -175,7 +210,7 @@ function DeliveryManagementTab({ accessToken }) {
         <div>
           <h2>Delivery Management</h2>
           <p className="manager-panel-note">
-            Delivery list with invoice references, product IDs, quantities, and addresses.
+            Filter delivery records by status, inspect invoice references, and update progress.
           </p>
         </div>
         <button type="button" className="manager-secondary-btn" onClick={loadOrders}>
@@ -185,77 +220,85 @@ function DeliveryManagementTab({ accessToken }) {
 
       {error ? <p className="manager-error">{error}</p> : null}
 
+      <div className="manager-filter-row">
+        {DELIVERY_SECTIONS.map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            className={`manager-filter-pill ${activeFilter === section.id ? "active" : ""}`}
+            onClick={() => setActiveFilter(section.id)}
+          >
+            {section.title} ({counts[section.id] || 0})
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="manager-status">Loading delivery list...</p>
       ) : (
         <div className="manager-delivery-layout">
           <div className="manager-delivery-sections">
-            {DELIVERY_SECTIONS.map((section) => {
-              const rows = groupedOrders[section.id] || [];
-              return (
-                <section key={section.id} className="manager-delivery-group">
-                  <div className="manager-delivery-group-head">
-                    <h3>{section.title}</h3>
-                    <span className="manager-status-badge">{rows.length}</span>
-                  </div>
-                  {rows.length === 0 ? (
-                    <p className="manager-empty">No rows in this section.</p>
-                  ) : (
-                    <div className="manager-table-wrap manager-table-wrap-scroll">
-                      <table className="manager-table manager-delivery-table">
-                        <thead>
-                          <tr>
-                            <th>Delivery ID</th>
-                            <th>Customer ID</th>
-                            <th>Product ID(s)</th>
-                            <th>Qty</th>
-                            <th>Total</th>
-                            <th>Address</th>
-                            <th>Status</th>
-                            <th>Completed</th>
-                            <th>Invoice</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map((order) => (
-                            <tr
-                              key={order.id}
-                              className={selectedOrderId === order.id ? "manager-delivery-row-selected" : ""}
+            <section className="manager-delivery-group">
+              <div className="manager-delivery-group-head">
+                <h3>{DELIVERY_SECTIONS.find((section) => section.id === activeFilter)?.title}</h3>
+                <span className="manager-status-badge">{filteredOrders.length}</span>
+              </div>
+              {filteredOrders.length === 0 ? (
+                <p className="manager-empty">No deliveries in this filter.</p>
+              ) : (
+                <div className="manager-table-wrap manager-table-wrap-scroll">
+                  <table className="manager-table manager-delivery-table">
+                    <thead>
+                      <tr>
+                        <th>Delivery ID</th>
+                        <th>Customer ID</th>
+                        <th>Product ID(s)</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                        <th>Address</th>
+                        <th>Status</th>
+                        <th>Completed</th>
+                        <th>Invoice</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order) => (
+                        <tr
+                          key={order.id}
+                          className={selectedOrderId === order.id ? "manager-delivery-row-selected" : ""}
+                        >
+                          <td>{order.delivery_id ?? "—"}</td>
+                          <td>{order.customer ?? "—"}</td>
+                          <td>{formatProductIds(order) || "—"}</td>
+                          <td>{totalQuantity(order)}</td>
+                          <td>{fmtCurrency(order.total_price)}</td>
+                          <td>{order.delivery_address || "—"}</td>
+                          <td>{getDeliveryStatusLabel(order)}</td>
+                          <td>
+                            {order.delivery_is_completed === null
+                              ? "—"
+                              : order.delivery_is_completed
+                                ? "Yes"
+                                : "No"}
+                          </td>
+                          <td>{order.invoice_number || "—"}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="manager-secondary-btn"
+                              onClick={() => setSelectedOrderId(order.id)}
                             >
-                              <td>{order.delivery_id ?? "—"}</td>
-                              <td>{order.customer ?? "—"}</td>
-                              <td>{formatProductIds(order) || "—"}</td>
-                              <td>{totalQuantity(order)}</td>
-                              <td>{fmtCurrency(order.total_price)}</td>
-                              <td>{order.delivery_address || "—"}</td>
-                              <td>{getDeliveryStatusLabel(order)}</td>
-                              <td>
-                                {order.delivery_is_completed === null
-                                  ? "—"
-                                  : order.delivery_is_completed
-                                    ? "Yes"
-                                    : "No"}
-                              </td>
-                              <td>{order.invoice_number || "—"}</td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="manager-secondary-btn"
-                                  onClick={() => setSelectedOrderId(order.id)}
-                                >
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         </div>
       )}
@@ -322,39 +365,22 @@ function DeliveryManagementTab({ accessToken }) {
 
             <div className="manager-order-items">
               {(selectedOrder.items || []).map((item) => {
-                const displayName =
-                  item.sneaker_detail?.name ||
-                  item.sneaker_detail?.brand_name ||
-                  `Sneaker #${item.sneaker}`;
-                const displayBrand = item.sneaker_detail?.brand_name || "Unknown brand";
+                const displayName = item.sneaker_name || `Sneaker #${item.sneaker}`;
                 return (
                   <article key={item.id} className="manager-order-item">
                     <div className="manager-order-item-media">
-                      {item.sneaker_detail?.primary_image ? (
-                        <img
-                          src={item.sneaker_detail.primary_image}
-                          alt={displayName}
-                          className="manager-order-item-image"
-                        />
-                      ) : (
-                        <div className="manager-order-item-fallback">
-                          {(displayBrand || displayName).slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
+                      <div className="manager-order-item-fallback">
+                        {displayName.slice(0, 2).toUpperCase()}
+                      </div>
                     </div>
                     <div className="manager-order-item-copy">
-                      <p className="manager-order-item-brand">{displayBrand}</p>
+                      <p className="manager-order-item-brand">Product #{item.sneaker}</p>
                       <p className="manager-order-item-name">
                         {displayName} (#{item.sneaker})
                       </p>
-                      <p className="manager-order-item-meta">
-                        Qty {item.quantity}
-                        {item.size_system && item.size_value
-                          ? ` · Size ${item.size_system} ${item.size_value}`
-                          : ""}
-                      </p>
+                      <p className="manager-order-item-meta">Qty {item.quantity}</p>
                     </div>
-                    <strong>{fmtCurrency(item.subtotal ?? item.unit_price * item.quantity)}</strong>
+                    <strong>{item.quantity}</strong>
                   </article>
                 );
               })}

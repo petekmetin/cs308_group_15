@@ -67,12 +67,9 @@ function OrdersPage({ cartCount }) {
     try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
   })();
   const userRole = localStorage.getItem("user_role") || currentUser?.role || "";
-  const isProductManager = userRole === "product_manager";
   const isCustomer = userRole === "customer";
-  const ordersTitle = isCustomer ? "Your Orders" : "All Orders";
-  const ordersNote = isCustomer
-    ? "Every order you have placed, with its current status and items."
-    : "Orders across all customers, with current status and item details.";
+  const ordersTitle = "Your Orders";
+  const ordersNote = "Every order you have placed, with its current status and items.";
 
   const loadOrders = async () => {
     setLoading(true);
@@ -94,25 +91,25 @@ function OrdersPage({ cartCount }) {
   };
 
   useEffect(() => {
-    if (isProductManager) {
-      navigate("/manager/dashboard?tab=deliveries", { replace: true });
+    if (!isCustomer) {
+      navigate("/home", { replace: true });
       return;
     }
     loadOrders();
-  }, [isProductManager, navigate]);
+  }, [isCustomer, navigate]);
 
   // Clear the navigation-state "just placed" flag after first render so
   // refreshing the page doesn't keep showing the banner.
   useEffect(() => {
-    if (isProductManager) {
+    if (!isCustomer) {
       return;
     }
     if (justPlaced) {
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [isProductManager, justPlaced, navigate, location.pathname]);
+  }, [isCustomer, justPlaced, navigate, location.pathname]);
 
-  if (isProductManager) {
+  if (!isCustomer) {
     return null;
   }
 
@@ -173,11 +170,9 @@ function OrdersPage({ cartCount }) {
           <div className="cart-summary-card">
             <span className="cart-summary-label">Total Orders</span>
             <span className="cart-summary-value">{orders.length}</span>
-            {isCustomer ? (
-              <Link to="/cart" className="landing-secondary-btn">
-                Back to Cart
-              </Link>
-            ) : null}
+            <Link to="/cart" className="landing-secondary-btn">
+              Back to Cart
+            </Link>
             <Link to="/home" className="landing-primary-btn">
               Continue Shopping
             </Link>
@@ -199,8 +194,8 @@ function OrdersPage({ cartCount }) {
         ) : (
           <section className="cart-items">
             {orders.map((order) => {
-              const isCancellable = isCustomer && ["pending", "processing"].includes(order.status);
-              const isRefundable = isCustomer && order.status === "delivered";
+              const isCancellable = ["pending", "processing"].includes(order.status);
+              const isRefundable = order.status === "delivered";
               return (
                 <article key={order.id} className="cart-item-card" style={{ flexDirection: "column", alignItems: "stretch" }}>
                   <header

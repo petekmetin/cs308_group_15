@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from django.db.models import Q, ExpressionWrapper, F, DecimalField
+from django.db.models import Q, ExpressionWrapper, F, DecimalField, Prefetch
 from django.db.models.functions import Coalesce
 
 from .models import Brand, Category, Sneaker, SneakerImage, SneakerSize, Wishlist, Review
@@ -396,9 +396,9 @@ def batch_discount_sneakers(request):
     product_ids = serializer.validated_data['product_ids']
     discount_percentage = serializer.validated_data['discount_percentage']
     sneakers = list(
-        Sneaker.objects.filter(id__in=product_ids)
-        .select_related('brand', 'category')
-        .prefetch_related('sizes', 'images')
+        sneaker_summary_queryset(
+            Sneaker.objects.filter(id__in=product_ids).select_related('brand', 'category')
+        )
     )
 
     found_ids = {sneaker.id for sneaker in sneakers}
@@ -444,7 +444,14 @@ class WishlistView(generics.ListCreateAPIView):
     permission_classes = [IsCustomer]
 
     def get_queryset(self):
-        return Wishlist.objects.filter(customer=self.request.user).select_related('sneaker')
+        return Wishlist.objects.filter(customer=self.request.user).prefetch_related(
+            Prefetch(
+                'sneaker',
+                queryset=sneaker_summary_queryset(
+                    Sneaker.objects.select_related('brand', 'category')
+                ),
+            )
+        )
 
     def perform_create(self, serializer):
         serializer.save(customer=self.request.user)

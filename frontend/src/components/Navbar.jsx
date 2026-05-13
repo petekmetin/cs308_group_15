@@ -34,7 +34,6 @@ function Navbar({ user, cartCount = 0 }) {
   const isAuthenticated = Boolean(accessToken || user);
   const userRole = localStorage.getItem("user_role") || user?.role || "";
   const isCustomer = userRole === "customer";
-  const ordersLabel = isCustomer ? "Orders" : "All Orders";
 
   // ── handleLogout ───────────────────────────────────────────
   // Called when the user clicks the "Sign Out" button.
@@ -120,13 +119,10 @@ function Navbar({ user, cartCount = 0 }) {
             <Link to="/wishlist" className="nav-cart-link">
               Wishlist
             </Link>
+            <Link to="/orders" className="nav-cart-link">
+              Orders
+            </Link>
           </>
-        ) : null}
-
-        {isAuthenticated && userRole !== "product_manager" ? (
-          <Link to="/orders" className="nav-cart-link">
-            {ordersLabel}
-          </Link>
         ) : null}
 
         {/*

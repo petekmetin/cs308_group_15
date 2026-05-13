@@ -202,10 +202,11 @@ class DeliveryOrderItemSerializer(serializers.ModelSerializer):
 
 class DeliveryOrderSerializer(serializers.ModelSerializer):
     items = DeliveryOrderItemSerializer(many=True, read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'total_price', 'items']
+        fields = ['id', 'customer', 'status', 'total_price', 'invoice_number', 'items', 'created_at']
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
@@ -216,14 +217,35 @@ class InvoiceSerializer(serializers.ModelSerializer):
         fields = ['id', 'invoice_number', 'order', 'issued_at', 'pdf_path', 'notes']
 
 
+class InvoiceListOrderSerializer(serializers.ModelSerializer):
+    customer_email = serializers.CharField(source='customer.email', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'customer', 'customer_email', 'status',
+            'total_price', 'delivery_address', 'credit_card_last4',
+            'created_at', 'updated_at',
+        ]
+
+
+class InvoiceListSerializer(serializers.ModelSerializer):
+    order = InvoiceListOrderSerializer(read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = ['id', 'invoice_number', 'order', 'issued_at', 'pdf_path', 'notes']
+
+
 class DeliverySerializer(serializers.ModelSerializer):
     order = DeliveryOrderSerializer(read_only=True)
     order_id = serializers.IntegerField(source='order.id', read_only=True)
+    invoice_number = serializers.CharField(source='order.invoice.invoice_number', read_only=True)
 
     class Meta:
         model = Delivery
         fields = [
             'id', 'order', 'order_id', 'status', 'tracking_number',
             'delivery_address', 'is_completed',
-            'dispatched_at', 'delivered_at', 'notes'
+            'dispatched_at', 'delivered_at', 'notes', 'invoice_number'
         ]

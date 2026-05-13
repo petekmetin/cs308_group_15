@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import api from "../api";
 import SneakerCard from "../components/SneakerCard";
@@ -9,6 +9,7 @@ import { mapSneakerFromApi, normalizePaginatedList } from "../utils/sneakers";
 import { addToWishlist, fetchWishlistIds, removeFromWishlist } from "../utils/wishlist";
 
 function LandingPage({ onAddToCart, cartCount = 0 }) {
+  const navigate = useNavigate();
   const [featuredSneakers, setFeaturedSneakers] = useState([]);
   const [loadingSneakers, setLoadingSneakers] = useState(true);
   const [sizePickerSneaker, setSizePickerSneaker] = useState(null);
@@ -86,6 +87,10 @@ function LandingPage({ onAddToCart, cartCount = 0 }) {
     }
     setCartError("");
     setSizePickerSneaker(sneaker);
+  };
+
+  const handleViewDetails = (sneaker) => {
+    navigate(`/sneakers/${sneaker.product_id ?? sneaker.id}`);
   };
 
   const handleConfirmSize = async (sizeOption) => {
@@ -167,6 +172,7 @@ function LandingPage({ onAddToCart, cartCount = 0 }) {
                     key={sneaker.id}
                     sneaker={sneaker}
                     onAddToCart={handleAddToCart}
+                    onViewDetails={handleViewDetails}
                     isWishlisted={wishlistedIds.has(sneaker.product_id ?? sneaker.id)}
                     onToggleWishlist={handleToggleWishlist}
                   />

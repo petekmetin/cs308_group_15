@@ -15,10 +15,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 
-from .models import Order, Invoice, Delivery
+from .models import Order, Invoice, Delivery, OrderItem
 from .serializers import (
     OrderSerializer, OrderCreateSerializer,
-    InvoiceSerializer, DeliverySerializer
+    InvoiceSerializer, InvoiceListSerializer, DeliverySerializer
 )
 from .services import email_invoice_pdf, generate_invoice_pdf
 from config.permissions import IsCustomer, IsSalesManager, IsProductManager
@@ -219,11 +219,26 @@ class InvoiceListView(generics.ListAPIView):
     GET /api/orders/invoices/
     Sales managers can filter by date: ?from=2024-01-01&to=2024-12-31
     """
-    serializer_class = InvoiceSerializer
+    serializer_class = InvoiceListSerializer
     permission_classes = [IsSalesManager]
 
     def get_queryset(self):
-        qs = Invoice.objects.all().select_related('order__customer')
+        qs = Invoice.objects.select_related('order__customer').only(
+            'id',
+            'invoice_number',
+            'issued_at',
+            'pdf_path',
+            'notes',
+            'order__id',
+            'order__customer_id',
+            'order__customer__email',
+            'order__status',
+            'order__total_price',
+            'order__delivery_address',
+            'order__credit_card_last4',
+            'order__created_at',
+            'order__updated_at',
+        )
         from_date = self.request.query_params.get('from')
         to_date = self.request.query_params.get('to')
         if from_date:
@@ -271,7 +286,20 @@ def sales_summary_report(request):
     orders = (
         Order.objects.exclude(status='cancelled')
         .filter(created_at__date__gte=from_date, created_at__date__lte=to_date)
-        .prefetch_related('items__sneaker')
+        .only('id', 'status', 'total_price', 'created_at')
+        .prefetch_related(
+            Prefetch(
+                'items',
+                queryset=OrderItem.objects.select_related('sneaker').only(
+                    'id',
+                    'order_id',
+                    'sneaker_id',
+                    'sneaker__id',
+                    'sneaker__cost_price',
+                    'quantity',
+                ),
+            )
+        )
         .order_by('created_at')
     )
     refunds = (
@@ -280,6 +308,7 @@ def sales_summary_report(request):
             refund_approved_at__date__lte=to_date,
         )
         .exclude(refund_amount__isnull=True)
+        .only('id', 'refund_approved_at', 'refund_amount')
         .order_by('refund_approved_at')
     )
 
@@ -366,19 +395,44 @@ class DeliveryListView(generics.ListAPIView):
     permission_classes = [IsProductManager]
 
     def get_queryset(self):
-        return (
-            Delivery.objects.select_related('order__customer')
+        queryset = (
+            Delivery.objects.select_related('order__invoice')
+            .only(
+                'id',
+                'order_id',
+                'status',
+                'tracking_number',
+                'delivery_address',
+                'is_completed',
+                'dispatched_at',
+                'delivered_at',
+                'notes',
+                'order__id',
+                'order__customer_id',
+                'order__status',
+                'order__total_price',
+                'order__created_at',
+                'order__invoice__invoice_number',
+            )
             .prefetch_related(
                 Prefetch(
-                    'order__items__sneaker',
-                    queryset=sneaker_summary_queryset(
-                        Sneaker.objects.select_related('brand', 'category')
+                    'order__items',
+                    queryset=OrderItem.objects.select_related('sneaker').only(
+                        'id',
+                        'order_id',
+                        'sneaker_id',
+                        'sneaker__id',
+                        'sneaker__name',
+                        'quantity',
                     ),
                 )
             )
-            .filter(is_completed=False)
-            .order_by('id')
+            .order_by('-id')
         )
+        status_filter = (self.request.query_params.get('status') or '').strip().lower()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
 
 
 @api_view(['PATCH'])

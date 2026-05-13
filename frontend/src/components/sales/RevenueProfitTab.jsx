@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bar,
   CartesianGrid,
-  ComposedChart,
   Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -155,7 +154,7 @@ function RevenueProfitTab({ accessToken }) {
               <p className="manager-empty">No revenue or refund activity in this date range.</p>
             ) : (
               <ResponsiveContainer width="100%" height={340}>
-                <ComposedChart data={chartData} margin={{ top: 12, right: 18, bottom: 4, left: 0 }}>
+                <LineChart data={chartData} margin={{ top: 12, right: 18, bottom: 4, left: 0 }}>
                   <CartesianGrid stroke="rgba(255,255,255,0.12)" vertical={false} />
                   <XAxis dataKey="date" stroke="#a9a9a9" tick={{ fontSize: 12 }} />
                   <YAxis stroke="#a9a9a9" tick={{ fontSize: 12 }} />
@@ -168,8 +167,22 @@ function RevenueProfitTab({ accessToken }) {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="revenueValue" name="Revenue" fill="#a6d8ff" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="refundValue" name="Refunds" fill="#ffadad" radius={[4, 4, 0, 0]} />
+                  <Line
+                    type="monotone"
+                    dataKey="revenueValue"
+                    name="Revenue"
+                    stroke="#a6d8ff"
+                    strokeWidth={3}
+                    dot={{ r: 3 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="refundValue"
+                    name="Refunds"
+                    stroke="#ffadad"
+                    strokeWidth={3}
+                    dot={{ r: 3 }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="profitValue"
@@ -178,7 +191,7 @@ function RevenueProfitTab({ accessToken }) {
                     strokeWidth={3}
                     dot={{ r: 3 }}
                   />
-                </ComposedChart>
+                </LineChart>
               </ResponsiveContainer>
             )}
           </div>

@@ -15,6 +15,8 @@ function SneakerCard({
     image,
     averageRating,
     ratingCount,
+    listPrice,
+    discountPercentage,
   } = sneaker;
   const hasStockInfo = typeof sneaker.is_in_stock === "boolean";
   const isOutOfStock = hasStockInfo && sneaker.is_in_stock === false;
@@ -33,14 +35,37 @@ function SneakerCard({
       ? "sneaker-stock-badge low"
       : "sneaker-stock-badge in";
   const isButtonDisabled = disabled || isOutOfStock;
+  const discount = Number(discountPercentage || 0);
+  const basePrice = Number(listPrice ?? price ?? 0);
+  const salePrice = Number(price ?? 0);
+  const hasDiscount = discount > 0 && basePrice > salePrice;
   const formattedPrice = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(price);
+  const formattedListPrice = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(basePrice);
+
+  const handleCardKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onViewDetails?.(sneaker);
+    }
+  };
 
   return (
-    <div className="sneaker-card">
+    <div
+      className="sneaker-card sneaker-card-clickable"
+      onClick={() => onViewDetails?.(sneaker)}
+      onKeyDown={handleCardKeyDown}
+      role={typeof onViewDetails === "function" ? "button" : undefined}
+      tabIndex={typeof onViewDetails === "function" ? 0 : undefined}
+      aria-label={typeof onViewDetails === "function" ? `View details for ${brand} ${name}` : undefined}
+    >
       <div className="sneaker-media">
         {image ? (
           <img className="sneaker-image" src={image} alt={`${brand} ${name}`} />
@@ -76,19 +101,23 @@ function SneakerCard({
         </p>
         <p className="sneaker-description">{description}</p>
         <div className="sneaker-footer">
-          <span className="sneaker-price">{formattedPrice}</span>
+          <div className="sneaker-price-stack">
+            <span className="sneaker-price">{formattedPrice}</span>
+            {hasDiscount ? (
+              <span className="sneaker-discount-line">
+                <s>{formattedListPrice}</s>
+                <strong>{discount.toFixed(0)}% off</strong>
+              </span>
+            ) : null}
+          </div>
           <div className="sneaker-actions">
-            <button
-              className="sneaker-btn secondary"
-              onClick={() => onViewDetails?.(sneaker)}
-              type="button"
-            >
-              View Details
-            </button>
             <button
               className="sneaker-btn"
               disabled={isButtonDisabled}
-              onClick={() => onAddToCart?.(sneaker)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddToCart?.(sneaker);
+              }}
               type="button"
             >
               {isOutOfStock ? "Out of Stock" : "Add to Cart"}

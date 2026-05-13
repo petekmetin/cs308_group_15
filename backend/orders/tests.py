@@ -144,6 +144,12 @@ class DeliveryEndpointsTests(APITestCase):
         list_after_delivery = pm_client.get('/api/orders/deliveries/')
         self.assertEqual(list_after_delivery.status_code, 200)
         rows = list_after_delivery.data.get('results', list_after_delivery.data)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['status'], 'delivered')
+
+        processing_rows = pm_client.get('/api/orders/deliveries/?status=processing')
+        self.assertEqual(processing_rows.status_code, 200)
+        rows = processing_rows.data.get('results', processing_rows.data)
         self.assertEqual(rows, [])
 
 

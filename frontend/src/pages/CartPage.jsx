@@ -38,7 +38,7 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
     try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
   })();
 
-  // Flow: 'cart' → 'address' → 'card' → (submit creates the order) → /orders
+  // Flow: 'cart' → 'address' → 'card' → (submit creates the order) → invoice confirmation
   const [step, setStep] = useState("cart");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [cardNumber, setCardNumber] = useState("");
@@ -64,6 +64,15 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
     setCardExpiry("");
     setCardCvv("");
     setError("");
+  };
+
+  const getSneakerIdFromCartItem = (item) => Number(item.slug?.replace("sneaker-", "")) || item.product_id || item.id;
+
+  const handleViewProduct = (item) => {
+    const sneakerId = getSneakerIdFromCartItem(item);
+    if (sneakerId) {
+      navigate(`/sneakers/${sneakerId}`);
+    }
   };
 
   const handleStartCheckout = async () => {
@@ -327,11 +336,11 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
           </div>
 
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <Link to="/orders" className="landing-primary-btn">
-              View Your Orders
-            </Link>
-            <Link to="/home" className="landing-secondary-btn">
+            <Link to="/home" className="landing-primary-btn">
               Continue Shopping
+            </Link>
+            <Link to="/orders" className="landing-secondary-btn">
+              View Your Orders
             </Link>
           </div>
         </article>
@@ -600,7 +609,20 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
         ) : (
           <section className="cart-items">
             {cartItems.map((item) => (
-              <article key={item.id} className="cart-item-card">
+              <article
+                key={item.id}
+                className="cart-item-card cart-item-card-clickable"
+                onClick={() => handleViewProduct(item)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleViewProduct(item);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`View details for ${item.name}`}
+              >
                 <div className="cart-item-media">
                   {item.image ? (
                     <img
@@ -629,11 +651,12 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                     <button
                       type="button"
                       className="cart-qty-btn"
-                      onClick={() =>
+                      onClick={(event) => {
+                        event.stopPropagation();
                         item.quantity === 1
                           ? handleRemoveItem(item.id)
-                          : handleQuantityChange(item, item.quantity - 1)
-                      }
+                          : handleQuantityChange(item, item.quantity - 1);
+                      }}
                       aria-label={`Decrease quantity of ${item.name}`}
                     >
                       -
@@ -642,7 +665,10 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                     <button
                       type="button"
                       className="cart-qty-btn"
-                      onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleQuantityChange(item, item.quantity + 1);
+                      }}
                       aria-label={`Increase quantity of ${item.name}`}
                     >
                       +
@@ -652,7 +678,10 @@ function CartPage({ cartItems, onUpdateQuantity, onRemoveFromCart, onClearCart, 
                   <button
                     type="button"
                     className="cart-remove-btn"
-                    onClick={() => handleRemoveItem(item.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRemoveItem(item.id);
+                    }}
                   >
                     Remove
                   </button>

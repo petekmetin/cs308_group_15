@@ -28,6 +28,20 @@ function fmtDate(value) {
   return date.toLocaleString();
 }
 
+const STATUS_CLASS = {
+  pending: "sales-status-pending",
+  processing: "sales-status-processing",
+  shipped: "sales-status-shipped",
+  delivered: "sales-status-delivered",
+  cancelled: "sales-status-cancelled",
+  return_requested: "sales-status-return-requested",
+  returned: "sales-status-returned",
+};
+
+function statusClass(status) {
+  return STATUS_CLASS[String(status || "").toLowerCase()] || "sales-status-neutral";
+}
+
 function isoDateDaysAgo(daysAgo) {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
@@ -99,6 +113,7 @@ function InvoiceManagementTab({ accessToken }) {
   const [invoices, setInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [detailLoadingId, setDetailLoadingId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [error, setError] = useState("");
 
@@ -170,6 +185,23 @@ function InvoiceManagementTab({ accessToken }) {
       setError(err.message || "Could not download invoice PDF.");
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const openInvoiceDetail = async (invoice) => {
+    setSelectedInvoice(invoice);
+    if (invoice.order?.items) {
+      return;
+    }
+    setDetailLoadingId(invoice.id);
+    setError("");
+    try {
+      const order = await fetchJson(`/api/orders/${invoice.order?.id}/`, { token: accessToken });
+      setSelectedInvoice({ ...invoice, order });
+    } catch (err) {
+      setError(err.message || "Could not load invoice detail.");
+    } finally {
+      setDetailLoadingId(null);
     }
   };
 
@@ -258,7 +290,7 @@ function InvoiceManagementTab({ accessToken }) {
                   <td>{fmtDate(invoice.issued_at)}</td>
                   <td>{fmtCurrency(invoice.order?.total_price)}</td>
                   <td>
-                    <span className="manager-status-badge manager-status-active">
+                    <span className={`manager-status-badge ${statusClass(invoice.order?.status)}`}>
                       {invoice.order?.status || "—"}
                     </span>
                   </td>
@@ -266,7 +298,7 @@ function InvoiceManagementTab({ accessToken }) {
                     <button
                       type="button"
                       className="manager-secondary-btn"
-                      onClick={() => setSelectedInvoice(invoice)}
+                      onClick={() => openInvoiceDetail(invoice)}
                     >
                       Details
                     </button>
@@ -342,6 +374,12 @@ function InvoiceManagementTab({ accessToken }) {
             </div>
 
             <div className="manager-order-items">
+              {detailLoadingId === selectedInvoice.id ? (
+                <p className="manager-status">Loading invoice detail...</p>
+              ) : null}
+              {detailLoadingId !== selectedInvoice.id && !(selectedInvoice.order?.items || []).length ? (
+                <p className="manager-empty">No line items loaded for this invoice.</p>
+              ) : null}
               {(selectedInvoice.order?.items || []).map((item) => (
                 <article key={item.id} className="manager-order-item">
                   <div className="manager-order-item-copy">

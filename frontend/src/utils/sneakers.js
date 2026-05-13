@@ -18,6 +18,8 @@ export function mapSneakerFromApi(item) {
     category: item.category_name || "",
     image: item.primary_image || "",
     price: Number(item.discounted_price ?? item.price ?? 0),
+    listPrice: Number(item.price ?? item.discounted_price ?? 0),
+    discountPercentage: Number(item.discount_percentage || 0),
     is_in_stock: item.is_in_stock,
     total_stock: item.total_stock,
     averageRating: item.average_rating,
