@@ -11,8 +11,7 @@ const STATUS_COLOR = {
   shipped: { bg: "#0f2a3a", fg: "#4fc3f7", label: "Shipped" },
   delivered: { bg: "#1a2e1a", fg: "#4caf50", label: "Delivered" },
   cancelled: { bg: "#2e1a1a", fg: "#ef5350", label: "Cancelled" },
-  return_requested: { bg: "#2e281a", fg: "#ffb74d", label: "Return Requested" },
-  returned: { bg: "#1a1f2e", fg: "#9fa8da", label: "Returned" },
+  failed: { bg: "#2e1a1a", fg: "#ff8a80", label: "Failed" },
 };
 
 function fmtCurrency(n) {
@@ -55,7 +54,7 @@ function StatusBadge({ status }) {
 }
 
 function getDisplayStatus(order) {
-  return order.delivery_status || order.status;
+  return order.status;
 }
 
 function OrdersPage({ cartCount }) {
@@ -63,6 +62,8 @@ function OrdersPage({ cartCount }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
+  const [returningItemId, setReturningItemId] = useState(null);
+  const [returnQuantities, setReturnQuantities] = useState({});
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -131,13 +132,25 @@ function OrdersPage({ cartCount }) {
     }
   };
 
-  const handleRequestRefund = async (orderId) => {
-    if (!window.confirm("Request a refund for this order?")) return;
+  const handleRequestReturn = async (orderId, item) => {
+    const maxQuantity = Number(item.returnable_quantity || 0);
+    const requestedQuantity = Math.min(
+      Math.max(Number(returnQuantities[item.id] || 1), 1),
+      maxQuantity
+    );
+    if (maxQuantity < 1) return;
+    if (!window.confirm(`Request return for ${requestedQuantity} item(s)?`)) return;
+    setReturningItemId(item.id);
     try {
-      await api.post(`/api/orders/${orderId}/refund/`);
+      await api.post(`/api/orders/${orderId}/returns/`, {
+        order_item_id: item.id,
+        quantity: requestedQuantity,
+      });
       await loadOrders();
     } catch (err) {
-      alert(err.response?.data?.detail || "Could not request a refund.");
+      alert(err.response?.data?.detail || "Could not request a return.");
+    } finally {
+      setReturningItemId(null);
     }
   };
 
@@ -200,7 +213,6 @@ function OrdersPage({ cartCount }) {
           <section className="cart-items">
             {orders.map((order) => {
               const isCancellable = ["pending", "processing"].includes(order.status);
-              const isRefundable = order.status === "delivered";
               const displayStatus = getDisplayStatus(order);
               return (
                 <article key={order.id} className="cart-item-card" style={{ flexDirection: "column", alignItems: "stretch" }}>
@@ -236,6 +248,8 @@ function OrdersPage({ cartCount }) {
                         `Sneaker #${item.sneaker}`;
                       const brand = item.sneaker_detail?.brand_name;
                       const image = item.sneaker_detail?.primary_image;
+                      const returnableQuantity = Number(item.returnable_quantity || 0);
+                      const canReturnItem = order.status === "delivered" && returnableQuantity > 0;
                       return (
                         <div
                           key={item.id}
@@ -293,6 +307,38 @@ function OrdersPage({ cartCount }) {
                           <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
                             {fmtCurrency(item.subtotal ?? item.unit_price * item.quantity)}
                           </div>
+                          {canReturnItem ? (
+                            <div style={{ display: "flex", gap: "0.45rem", alignItems: "center", flexWrap: "wrap" }}>
+                              <input
+                                type="number"
+                                min="1"
+                                max={returnableQuantity}
+                                value={returnQuantities[item.id] || 1}
+                                onChange={(event) =>
+                                  setReturnQuantities((prev) => ({
+                                    ...prev,
+                                    [item.id]: event.target.value,
+                                  }))
+                                }
+                                style={{
+                                  width: 68,
+                                  background: "#111",
+                                  border: "1px solid #333",
+                                  color: "#f5f5f5",
+                                  borderRadius: 6,
+                                  padding: "0.45rem",
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="landing-secondary-btn"
+                                onClick={() => handleRequestReturn(order.id, item)}
+                                disabled={returningItemId === item.id}
+                              >
+                                {returningItemId === item.id ? "Requesting..." : "Return Item"}
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -330,15 +376,6 @@ function OrdersPage({ cartCount }) {
                           disabled={cancellingId === order.id}
                         >
                           {cancellingId === order.id ? "Cancelling…" : "Cancel Order"}
-                        </button>
-                      ) : null}
-                      {isRefundable ? (
-                        <button
-                          type="button"
-                          className="landing-secondary-btn"
-                          onClick={() => handleRequestRefund(order.id)}
-                        >
-                          Request Refund
                         </button>
                       ) : null}
                     </div>

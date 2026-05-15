@@ -2112,6 +2112,49 @@ input::placeholder {
   color: #d2b8ff;
 }
 
+.sales-return-requested {
+  border-color: rgba(255, 173, 96, 0.58);
+  background: rgba(255, 173, 96, 0.14);
+  color: #ffc281;
+}
+
+.sales-return-received {
+  border-color: rgba(70, 168, 255, 0.55);
+  background: rgba(70, 168, 255, 0.14);
+  color: #a6d8ff;
+}
+
+.sales-return-approved {
+  border-color: rgba(83, 201, 119, 0.55);
+  background: rgba(83, 201, 119, 0.14);
+  color: #6ce08c;
+}
+
+.sales-return-rejected {
+  border-color: rgba(239, 83, 80, 0.55);
+  background: rgba(239, 83, 80, 0.14);
+  color: #ff9b9b;
+}
+
+.sales-manager-note {
+  display: grid;
+  gap: 0.45rem;
+  color: #d8d8d8;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sales-manager-note textarea {
+  width: 100%;
+  resize: vertical;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f5f5f5;
+  border-radius: 8px;
+  padding: 0.7rem;
+  font: inherit;
+}
+
 .sales-status-neutral {
   border-color: rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.06);

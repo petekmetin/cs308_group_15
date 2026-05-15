@@ -32,10 +32,10 @@ const STATUS_CLASS = {
   pending: "sales-status-pending",
   processing: "sales-status-processing",
   shipped: "sales-status-shipped",
+  in_transit: "sales-status-shipped",
   delivered: "sales-status-delivered",
   cancelled: "sales-status-cancelled",
-  return_requested: "sales-status-return-requested",
-  returned: "sales-status-returned",
+  failed: "sales-status-cancelled",
 };
 
 function statusClass(status) {

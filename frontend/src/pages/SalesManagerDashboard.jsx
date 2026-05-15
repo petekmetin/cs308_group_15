@@ -5,11 +5,13 @@ import Navbar from "../components/Navbar";
 import InvoiceManagementTab from "../components/sales/InvoiceManagementTab";
 import PricingDiscountsTab from "../components/sales/PricingDiscountsTab";
 import RevenueProfitTab from "../components/sales/RevenueProfitTab";
+import ReturnRequestsTab from "../components/sales/ReturnRequestsTab";
 import { fetchJson, getStoredRole, getStoredUser } from "../utils/http";
 
 const DASHBOARD_TABS = [
   { id: "pricing", label: "Pricing & Discounts" },
   { id: "invoices", label: "Invoices" },
+  { id: "returns", label: "Returns & Refunds" },
   { id: "reports", label: "Revenue & Profit" },
 ];
 
@@ -122,6 +124,7 @@ function SalesManagerDashboard({ cartCount = 0 }) {
 
         {activeTab === "pricing" ? <PricingDiscountsTab accessToken={accessToken} /> : null}
         {activeTab === "invoices" ? <InvoiceManagementTab accessToken={accessToken} /> : null}
+        {activeTab === "returns" ? <ReturnRequestsTab accessToken={accessToken} /> : null}
         {activeTab === "reports" ? <RevenueProfitTab accessToken={accessToken} /> : null}
       </main>
     </div>
