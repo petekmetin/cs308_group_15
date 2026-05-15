@@ -366,15 +366,24 @@ function DeliveryManagementTab({ accessToken }) {
             <div className="manager-order-items">
               {(selectedOrder.items || []).map((item) => {
                 const displayName = item.sneaker_name || `Sneaker #${item.sneaker}`;
+                const displayBrand = item.sneaker_brand || `Product #${item.sneaker}`;
                 return (
                   <article key={item.id} className="manager-order-item">
                     <div className="manager-order-item-media">
-                      <div className="manager-order-item-fallback">
-                        {displayName.slice(0, 2).toUpperCase()}
-                      </div>
+                      {item.primary_image ? (
+                        <img
+                          src={item.primary_image}
+                          alt={displayName}
+                          className="manager-order-item-image"
+                        />
+                      ) : (
+                        <div className="manager-order-item-fallback">
+                          {displayName.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <div className="manager-order-item-copy">
-                      <p className="manager-order-item-brand">Product #{item.sneaker}</p>
+                      <p className="manager-order-item-brand">{displayBrand}</p>
                       <p className="manager-order-item-name">
                         {displayName} (#{item.sneaker})
                       </p>

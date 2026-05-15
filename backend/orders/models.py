@@ -146,6 +146,9 @@ class Delivery(models.Model):
         ('processing', 'Processing'),
         ('in_transit', 'In Transit'),
         ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+        ('return_requested', 'Return Requested'),
+        ('returned', 'Returned'),
         ('failed', 'Failed'),
     ]
 

@@ -3,7 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from accounts.validators import get_customer_profile_errors
 from .models import Order, OrderItem, Invoice, Delivery
-from products.serializers import SneakerListSerializer
+from products.serializers import SneakerListSerializer, build_media_url
 from products.models import Sneaker, SneakerSize
 
 
@@ -194,10 +194,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class DeliveryOrderItemSerializer(serializers.ModelSerializer):
     sneaker_name = serializers.CharField(source='sneaker.name', read_only=True)
+    sneaker_brand = serializers.CharField(source='sneaker.brand.name', read_only=True)
+    primary_image = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'sneaker', 'sneaker_name', 'quantity']
+        fields = ['id', 'sneaker', 'sneaker_name', 'sneaker_brand', 'primary_image', 'quantity']
+
+    def get_primary_image(self, obj):
+        images = getattr(obj.sneaker, 'prefetched_images', None)
+        if images is not None:
+            image = images[0] if images else None
+            return build_media_url(self.context.get('request'), image.image if image else None)
+        image = obj.sneaker.images.order_by('-is_primary', 'order', 'id').first()
+        return build_media_url(self.context.get('request'), image.image if image else None)
 
 
 class DeliveryOrderSerializer(serializers.ModelSerializer):

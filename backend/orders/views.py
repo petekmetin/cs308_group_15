@@ -22,7 +22,7 @@ from .serializers import (
 )
 from .services import email_invoice_pdf, generate_invoice_pdf
 from config.permissions import IsCustomer, IsSalesManager, IsProductManager
-from products.models import Sneaker
+from products.models import Sneaker, SneakerImage
 from products.querysets import sneaker_summary_queryset
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,23 @@ def optimized_order_queryset():
             )
         )
     )
+
+
+def sync_delivery_from_order(order, *, status, is_completed=None):
+    try:
+        delivery = order.delivery
+    except Delivery.DoesNotExist:
+        return None
+
+    delivery.status = status
+    if is_completed is not None:
+        delivery.is_completed = is_completed
+    if status in {'cancelled', 'return_requested', 'returned', 'failed'}:
+        delivery.is_completed = False
+    if status in {'cancelled', 'return_requested', 'returned', 'failed', 'processing'}:
+        delivery.delivered_at = None
+    delivery.save(update_fields=['status', 'is_completed', 'delivered_at'])
+    return delivery
 
 
 class OrderListView(generics.ListAPIView):
@@ -153,6 +170,7 @@ def cancel_order(request, pk):
 
         order.status = 'cancelled'
         order.save(update_fields=['status'])
+        sync_delivery_from_order(order, status='cancelled')
     order = optimized_order_queryset().get(pk=order.pk)
     return Response(OrderSerializer(order).data)
 
@@ -179,6 +197,7 @@ def request_refund(request, pk):
     order.status = 'return_requested'
     order.refund_requested_at = timezone.now()
     order.save(update_fields=['status', 'refund_requested_at'])
+    sync_delivery_from_order(order, status='return_requested')
     order = optimized_order_queryset().get(pk=order.pk)
     return Response(OrderSerializer(order).data)
 
@@ -208,6 +227,7 @@ def approve_refund(request, pk):
         order.refund_approved_at = timezone.now()
         order.refund_amount = order.total_price
         order.save(update_fields=['status', 'refund_approved_at', 'refund_amount'])
+        sync_delivery_from_order(order, status='returned')
     order = optimized_order_queryset().get(pk=order.pk)
     return Response(OrderSerializer(order).data)
 
@@ -417,14 +437,24 @@ class DeliveryListView(generics.ListAPIView):
             .prefetch_related(
                 Prefetch(
                     'order__items',
-                    queryset=OrderItem.objects.select_related('sneaker').only(
+                    queryset=OrderItem.objects.select_related('sneaker__brand').only(
                         'id',
                         'order_id',
                         'sneaker_id',
                         'sneaker__id',
                         'sneaker__name',
+                        'sneaker__brand_id',
+                        'sneaker__brand__id',
+                        'sneaker__brand__name',
                         'quantity',
                     ),
+                )
+            )
+            .prefetch_related(
+                Prefetch(
+                    'order__items__sneaker__images',
+                    queryset=SneakerImage.objects.order_by('-is_primary', 'order', 'id'),
+                    to_attr='prefetched_images',
                 )
             )
             .order_by('-id')
@@ -474,7 +504,7 @@ def update_delivery(request, pk):
         if delivery.status in {'processing', 'in_transit'}:
             delivery.is_completed = False
             delivery.delivered_at = None
-            delivery.order.status = 'processing'
+            delivery.order.status = 'shipped' if delivery.status == 'in_transit' else 'processing'
             delivery.order.save(update_fields=['status'])
             if delivery.status == 'in_transit' and delivery.dispatched_at is None:
                 delivery.dispatched_at = timezone.now()

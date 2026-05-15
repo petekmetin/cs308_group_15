@@ -11,7 +11,7 @@ from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
 
-from products.models import Brand, Category, Sneaker, SneakerSize
+from products.models import Brand, Category, Sneaker, SneakerImage, SneakerSize
 
 from .models import Delivery, Invoice, Order, OrderItem
 from .serializers import OrderCreateSerializer
@@ -50,6 +50,12 @@ class DeliveryEndpointsTests(APITestCase):
             description='Stable daily runner.',
             price='140.00',
             is_active=True,
+        )
+        SneakerImage.objects.create(
+            sneaker=sneaker,
+            image='products/sneakers/tempo-runner.png',
+            alt_text='Tempo Runner side profile',
+            is_primary=True,
         )
         size = SneakerSize.objects.create(
             sneaker=sneaker,
@@ -105,6 +111,8 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(row['order']['items'][0]['sneaker'], self.order.items.first().sneaker_id)
         self.assertEqual(row['order']['items'][0]['quantity'], 2)
         self.assertTrue(row['order']['items'][0]['sneaker_name'])
+        self.assertIn('primary_image', row['order']['items'][0])
+        self.assertTrue(row['order']['items'][0]['primary_image'])
 
     def test_delivery_patch_updates_status_and_marks_completed_on_delivered(self):
         pm_client = self.client_class()
@@ -126,6 +134,8 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(in_transit.status_code, 200)
         self.assertEqual(in_transit.data['status'], 'in_transit')
         self.assertFalse(in_transit.data['is_completed'])
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'shipped')
 
         delivered = pm_client.patch(
             f'/api/orders/deliveries/{self.delivery.id}/',
@@ -377,6 +387,11 @@ class OrderTransactionTests(APITestCase):
     def test_cancel_order_commits_stock_restoration_and_status(self):
         """Successful cancel: stock restored and order marked cancelled together."""
         order = self._make_order(status='pending')
+        delivery = Delivery.objects.create(
+            order=order,
+            status='processing',
+            delivery_address=order.delivery_address,
+        )
         self.client.force_authenticate(self.customer)
 
         response = self.client.post(f'/api/orders/{order.id}/cancel/')
@@ -385,7 +400,9 @@ class OrderTransactionTests(APITestCase):
         self.size.refresh_from_db()
         self.assertEqual(self.size.stock, 12)  # 10 + 2 returned
         order.refresh_from_db()
+        delivery.refresh_from_db()
         self.assertEqual(order.status, 'cancelled')
+        self.assertEqual(delivery.status, 'cancelled')
 
     def test_cancel_order_rollback_keeps_stock_and_status_unchanged(self):
         """Crash on order.save() rolls back the stock restoration."""
@@ -625,6 +642,12 @@ class OrderTransactionTests(APITestCase):
     def test_request_refund_succeeds_within_30_day_window(self):
         """Refund request within 30 days succeeds."""
         order = self._make_order(status='delivered')
+        delivery = Delivery.objects.create(
+            order=order,
+            status='delivered',
+            delivery_address=order.delivery_address,
+            is_completed=True,
+        )
         Order.objects.filter(id=order.id).update(
             updated_at=timezone.now() - timedelta(days=15)
         )
@@ -632,7 +655,9 @@ class OrderTransactionTests(APITestCase):
         response = self.client.post(f'/api/orders/{order.id}/refund/')
         self.assertEqual(response.status_code, 200)
         order.refresh_from_db()
+        delivery.refresh_from_db()
         self.assertEqual(order.status, 'return_requested')
+        self.assertEqual(delivery.status, 'return_requested')
         self.assertIsNotNone(order.refund_requested_at)
 
     # ── Approve refund edge cases ────────────────────────────────────────────

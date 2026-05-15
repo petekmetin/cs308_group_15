@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 const STATUS_COLOR = {
   pending: { bg: "#3a2f0f", fg: "#f7c948", label: "Pending" },
   processing: { bg: "#0f2a3a", fg: "#4fc3f7", label: "Processing" },
+  in_transit: { bg: "#141f3a", fg: "#8fb3ff", label: "In Transit" },
   shipped: { bg: "#0f2a3a", fg: "#4fc3f7", label: "Shipped" },
   delivered: { bg: "#1a2e1a", fg: "#4caf50", label: "Delivered" },
   cancelled: { bg: "#2e1a1a", fg: "#ef5350", label: "Cancelled" },
@@ -51,6 +52,10 @@ function StatusBadge({ status }) {
       {meta.label}
     </span>
   );
+}
+
+function getDisplayStatus(order) {
+  return order.delivery_status || order.status;
 }
 
 function OrdersPage({ cartCount }) {
@@ -196,6 +201,7 @@ function OrdersPage({ cartCount }) {
             {orders.map((order) => {
               const isCancellable = ["pending", "processing"].includes(order.status);
               const isRefundable = order.status === "delivered";
+              const displayStatus = getDisplayStatus(order);
               return (
                 <article key={order.id} className="cart-item-card" style={{ flexDirection: "column", alignItems: "stretch" }}>
                   <header
@@ -219,7 +225,7 @@ function OrdersPage({ cartCount }) {
                         </span>
                       </h2>
                     </div>
-                    <StatusBadge status={order.status} />
+                    <StatusBadge status={displayStatus} />
                   </header>
 
                   <div style={{ display: "grid", gap: "0.6rem", marginBottom: "1rem" }}>
