@@ -3,6 +3,7 @@ import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -13,7 +14,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from products.models import Brand, Category, Sneaker, SneakerImage, SneakerSize
 
-from .models import Delivery, Invoice, Order, OrderItem
+from .models import Invoice, Order, OrderItem, ReturnRequest, ReturnRequestItem
 from .serializers import OrderCreateSerializer
 
 
@@ -66,7 +67,7 @@ class DeliveryEndpointsTests(APITestCase):
 
         self.order = Order.objects.create(
             customer=self.customer_user,
-            status='pending',
+            status='processing',
             total_price='280.00',
             delivery_address='123 Test Street',
             credit_card_last4='4242',
@@ -77,12 +78,6 @@ class DeliveryEndpointsTests(APITestCase):
             size=size,
             quantity=2,
             unit_price='140.00',
-        )
-        self.delivery = Delivery.objects.create(
-            order=self.order,
-            status='processing',
-            delivery_address=self.order.delivery_address,
-            is_completed=False,
         )
 
     def test_delivery_list_is_pm_only_and_contains_nested_order_shape(self):
@@ -100,7 +95,7 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(len(rows), 1)
         row = rows[0]
 
-        self.assertEqual(row['id'], self.delivery.id)
+        self.assertEqual(row['id'], self.order.id)
         self.assertEqual(row['delivery_address'], self.order.delivery_address)
         self.assertEqual(row['status'], 'processing')
         self.assertFalse(row['is_completed'])
@@ -119,7 +114,7 @@ class DeliveryEndpointsTests(APITestCase):
         pm_client.force_authenticate(self.pm_user)
 
         processing = pm_client.patch(
-            f'/api/orders/deliveries/{self.delivery.id}/',
+            f'/api/orders/deliveries/{self.order.id}/',
             {'status': 'processing'},
             format='json',
         )
@@ -127,7 +122,7 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(processing.data['status'], 'processing')
 
         in_transit = pm_client.patch(
-            f'/api/orders/deliveries/{self.delivery.id}/',
+            f'/api/orders/deliveries/{self.order.id}/',
             {'status': 'in_transit'},
             format='json',
         )
@@ -135,10 +130,10 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(in_transit.data['status'], 'in_transit')
         self.assertFalse(in_transit.data['is_completed'])
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, 'shipped')
+        self.assertEqual(self.order.status, 'in_transit')
 
         delivered = pm_client.patch(
-            f'/api/orders/deliveries/{self.delivery.id}/',
+            f'/api/orders/deliveries/{self.order.id}/',
             {'status': 'delivered'},
             format='json',
         )
@@ -146,9 +141,8 @@ class DeliveryEndpointsTests(APITestCase):
         self.assertEqual(delivered.data['status'], 'delivered')
         self.assertTrue(delivered.data['is_completed'])
 
-        self.delivery.refresh_from_db()
         self.order.refresh_from_db()
-        self.assertTrue(self.delivery.is_completed)
+        self.assertTrue(self.order.is_completed)
         self.assertEqual(self.order.status, 'delivered')
 
         list_after_delivery = pm_client.get('/api/orders/deliveries/')
@@ -222,12 +216,6 @@ class OrderListMetadataTests(APITestCase):
             order=self.order_with_meta,
             invoice_number='INV-META-0001',
         )
-        self.delivery = Delivery.objects.create(
-            order=self.order_with_meta,
-            status='pending',
-            delivery_address=self.order_with_meta.delivery_address,
-            is_completed=False,
-        )
 
         self.order_without_meta = Order.objects.create(
             customer=self.customer_user,
@@ -256,12 +244,12 @@ class OrderListMetadataTests(APITestCase):
         without_meta = by_id[self.order_without_meta.id]
 
         self.assertEqual(with_meta['invoice_number'], self.invoice.invoice_number)
-        self.assertEqual(with_meta['delivery_id'], self.delivery.id)
+        self.assertEqual(with_meta['delivery_id'], self.order_with_meta.id)
         self.assertFalse(with_meta['delivery_is_completed'])
 
         self.assertIsNone(without_meta['invoice_number'])
-        self.assertIsNone(without_meta['delivery_id'])
-        self.assertIsNone(without_meta['delivery_is_completed'])
+        self.assertEqual(without_meta['delivery_id'], self.order_without_meta.id)
+        self.assertFalse(without_meta['delivery_is_completed'])
 
 
 class OrderTransactionTests(APITestCase):
@@ -342,7 +330,7 @@ class OrderTransactionTests(APITestCase):
     # ── Order Creation ──────────────────────────────────────────────────────
 
     def test_create_order_commits_all_writes(self):
-        """Successful order: stock deducted, Order/Invoice/Delivery all created."""
+        """Successful order: stock deducted, Order and Invoice created."""
         self.client.force_authenticate(self.customer)
         initial_stock = self.size.stock
 
@@ -358,17 +346,18 @@ class OrderTransactionTests(APITestCase):
         self.size.refresh_from_db()
         self.assertEqual(self.size.stock, initial_stock - 2)
         self.assertTrue(Invoice.objects.filter(order_id=order_id).exists())
-        delivery = Delivery.objects.get(order_id=order_id)
-        self.assertEqual(delivery.status, 'processing')
+        order = Order.objects.get(id=order_id)
+        self.assertEqual(order.status, 'processing')
+        self.assertFalse(order.is_completed)
 
     def test_create_order_rollback_restores_stock_and_removes_order(self):
-        """Crash creating Delivery rolls back Order, OrderItems, and stock deduction."""
+        """Crash creating Invoice rolls back Order, OrderItems, and stock deduction."""
         self.client.force_authenticate(self.customer)
         initial_stock = self.size.stock
         initial_order_count = Order.objects.count()
 
         self.client.raise_request_exception = False
-        with patch('orders.serializers.Delivery.objects.create',
+        with patch('orders.serializers.Invoice.objects.create',
                    side_effect=Exception('Simulated DB failure')):
             response = self.client.post('/api/orders/create/', {
                 'delivery_address': '1 Test Ave',
@@ -387,11 +376,6 @@ class OrderTransactionTests(APITestCase):
     def test_cancel_order_commits_stock_restoration_and_status(self):
         """Successful cancel: stock restored and order marked cancelled together."""
         order = self._make_order(status='pending')
-        delivery = Delivery.objects.create(
-            order=order,
-            status='processing',
-            delivery_address=order.delivery_address,
-        )
         self.client.force_authenticate(self.customer)
 
         response = self.client.post(f'/api/orders/{order.id}/cancel/')
@@ -400,9 +384,7 @@ class OrderTransactionTests(APITestCase):
         self.size.refresh_from_db()
         self.assertEqual(self.size.stock, 12)  # 10 + 2 returned
         order.refresh_from_db()
-        delivery.refresh_from_db()
         self.assertEqual(order.status, 'cancelled')
-        self.assertEqual(delivery.status, 'cancelled')
 
     def test_cancel_order_rollback_keeps_stock_and_status_unchanged(self):
         """Crash on order.save() rolls back the stock restoration."""
@@ -419,76 +401,94 @@ class OrderTransactionTests(APITestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'pending')  # unchanged
 
-    # ── Approve Refund ──────────────────────────────────────────────────────
+    # ── Approve Return ──────────────────────────────────────────────────────
 
-    def test_approve_refund_commits_stock_restoration_and_order_update(self):
-        """Successful refund approval: stock restored and order fully updated."""
-        order = self._make_order(status='return_requested')
+    def _make_return_request(self, order, quantity=1, unit_price='120.00'):
+        order_item = order.items.first()
+        return_request = ReturnRequest.objects.create(
+            customer=self.customer,
+            order=order,
+            status='requested',
+            total_refund_amount=str(Decimal(unit_price) * quantity),
+        )
+        ReturnRequestItem.objects.create(
+            return_request=return_request,
+            order_item=order_item,
+            quantity=quantity,
+            unit_refund_amount=unit_price,
+            subtotal_refund_amount=str(Decimal(unit_price) * quantity),
+        )
+        return return_request
+
+    def test_approve_return_commits_stock_restoration_and_refund_update(self):
+        """Successful return approval: stock restored and refund total recorded."""
+        order = self._make_order(status='delivered')
+        return_request = self._make_return_request(order, quantity=1)
         self.client.force_authenticate(self.sales_manager)
 
-        response = self.client.post(f'/api/orders/{order.id}/approve-refund/')
+        response = self.client.patch(
+            f'/api/orders/returns/{return_request.id}/',
+            {'status': 'approved'},
+            format='json',
+        )
 
         self.assertEqual(response.status_code, 200)
         self.size.refresh_from_db()
-        self.assertEqual(self.size.stock, 12)  # 10 + 2 returned
+        self.assertEqual(self.size.stock, 11)  # 10 + 1 returned
         order.refresh_from_db()
-        self.assertEqual(order.status, 'returned')
+        self.assertEqual(order.status, 'delivered')
         self.assertIsNotNone(order.refund_approved_at)
-        self.assertEqual(str(order.refund_amount), str(order.total_price))
+        self.assertEqual(str(order.refund_amount), '120.00')
+        return_request.refresh_from_db()
+        self.assertEqual(return_request.status, 'approved')
 
-    def test_approve_refund_rollback_keeps_stock_and_status_unchanged(self):
-        """Crash on order.save() rolls back the stock restoration."""
-        order = self._make_order(status='return_requested')
+    def test_approve_return_rollback_keeps_stock_and_status_unchanged(self):
+        """Crash on return_request.save() rolls back stock restoration."""
+        order = self._make_order(status='delivered')
+        return_request = self._make_return_request(order, quantity=1)
         self.client.force_authenticate(self.sales_manager)
 
         self.client.raise_request_exception = False
-        with patch.object(Order, 'save', side_effect=Exception('Simulated DB failure')):
-            response = self.client.post(f'/api/orders/{order.id}/approve-refund/')
+        with patch.object(ReturnRequest, 'save', side_effect=Exception('Simulated DB failure')):
+            response = self.client.patch(
+                f'/api/orders/returns/{return_request.id}/',
+                {'status': 'approved'},
+                format='json',
+            )
 
         self.assertEqual(response.status_code, 500)
         self.size.refresh_from_db()
         self.assertEqual(self.size.stock, 10)  # unchanged
-        order.refresh_from_db()
-        self.assertEqual(order.status, 'return_requested')  # unchanged
+        return_request.refresh_from_db()
+        self.assertEqual(return_request.status, 'requested')  # unchanged
 
     # ── Delivery Update ─────────────────────────────────────────────────────
 
     def test_update_delivery_to_delivered_commits_both_saves(self):
-        """Marking delivery delivered updates both the delivery and order status."""
+        """Marking delivery delivered updates the canonical order status."""
         order = self._make_order(status='processing')
-        delivery = Delivery.objects.create(
-            order=order,
-            status='in_transit',
-            delivery_address=order.delivery_address,
-        )
         self.client.force_authenticate(self.product_manager)
 
         response = self.client.patch(
-            f'/api/orders/deliveries/{delivery.id}/',
+            f'/api/orders/deliveries/{order.id}/',
             {'status': 'delivered'},
             format='json',
         )
 
         self.assertEqual(response.status_code, 200)
-        delivery.refresh_from_db()
         order.refresh_from_db()
-        self.assertTrue(delivery.is_completed)
+        self.assertTrue(order.is_completed)
         self.assertEqual(order.status, 'delivered')
 
     def test_update_delivery_rollback_keeps_order_status_unchanged(self):
-        """Crash on delivery.save() rolls back the order status update."""
+        """Crash on order.save() rolls back the order status update."""
         order = self._make_order(status='processing')
-        delivery = Delivery.objects.create(
-            order=order,
-            status='in_transit',
-            delivery_address=order.delivery_address,
-        )
         self.client.force_authenticate(self.product_manager)
 
         self.client.raise_request_exception = False
-        with patch.object(Delivery, 'save', side_effect=Exception('Simulated DB failure')):
+        with patch.object(Order, 'save', side_effect=Exception('Simulated DB failure')):
             response = self.client.patch(
-                f'/api/orders/deliveries/{delivery.id}/',
+                f'/api/orders/deliveries/{order.id}/',
                 {'status': 'delivered'},
                 format='json',
             )
@@ -616,54 +616,86 @@ class OrderTransactionTests(APITestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'pending')
 
-    # ── Refund request edge cases ────────────────────────────────────────────
+    # ── Return request edge cases ────────────────────────────────────────────
 
-    def test_request_refund_rejects_non_delivered_order(self):
-        """Refund can only be requested on delivered orders."""
+    def test_return_request_rejects_non_delivered_order(self):
+        """Returns can only be requested on delivered orders."""
         order = self._make_order(status='processing')
         self.client.force_authenticate(self.customer)
-        response = self.client.post(f'/api/orders/{order.id}/refund/')
+        order_item = order.items.first()
+        response = self.client.post(
+            f'/api/orders/{order.id}/returns/',
+            {'order_item_id': order_item.id, 'quantity': 1},
+            format='json',
+        )
         self.assertEqual(response.status_code, 400)
         order.refresh_from_db()
         self.assertEqual(order.status, 'processing')
 
-    def test_request_refund_rejects_after_30_day_window(self):
-        """Refund request is rejected if more than 30 days have passed since delivery."""
+    def test_return_request_rejects_after_30_day_window(self):
+        """Return request is rejected if more than 30 days have passed since delivery."""
         order = self._make_order(status='delivered')
         Order.objects.filter(id=order.id).update(
-            updated_at=timezone.now() - timedelta(days=31)
+            delivered_at=timezone.now() - timedelta(days=31)
         )
         self.client.force_authenticate(self.customer)
-        response = self.client.post(f'/api/orders/{order.id}/refund/')
+        order_item = order.items.first()
+        response = self.client.post(
+            f'/api/orders/{order.id}/returns/',
+            {'order_item_id': order_item.id, 'quantity': 1},
+            format='json',
+        )
         self.assertEqual(response.status_code, 400)
         order.refresh_from_db()
         self.assertEqual(order.status, 'delivered')
 
-    def test_request_refund_succeeds_within_30_day_window(self):
-        """Refund request within 30 days succeeds."""
+    def test_return_request_succeeds_within_30_day_window(self):
+        """Item-level return request within 30 days succeeds without changing order status."""
         order = self._make_order(status='delivered')
-        delivery = Delivery.objects.create(
-            order=order,
-            status='delivered',
-            delivery_address=order.delivery_address,
-            is_completed=True,
-        )
         Order.objects.filter(id=order.id).update(
-            updated_at=timezone.now() - timedelta(days=15)
+            delivered_at=timezone.now() - timedelta(days=15)
         )
         self.client.force_authenticate(self.customer)
-        response = self.client.post(f'/api/orders/{order.id}/refund/')
-        self.assertEqual(response.status_code, 200)
+        order_item = order.items.first()
+        response = self.client.post(
+            f'/api/orders/{order.id}/returns/',
+            {'order_item_id': order_item.id, 'quantity': 1},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
         order.refresh_from_db()
-        delivery.refresh_from_db()
-        self.assertEqual(order.status, 'return_requested')
-        self.assertEqual(delivery.status, 'return_requested')
+        self.assertEqual(order.status, 'delivered')
         self.assertIsNotNone(order.refund_requested_at)
+        self.assertEqual(ReturnRequest.objects.count(), 1)
+        return_request = ReturnRequest.objects.first()
+        self.assertEqual(str(return_request.total_refund_amount), '120.00')
 
-    # ── Approve refund edge cases ────────────────────────────────────────────
+    def test_return_request_supports_partial_quantity_and_purchase_price(self):
+        """Customer can return part of a line and refund uses captured unit price."""
+        order = self._make_order(status='delivered')
+        order.delivered_at = timezone.now()
+        order.save(update_fields=['delivered_at'])
+        order_item = order.items.first()
+        order_item.unit_price = Decimal('84.50')
+        order_item.save(update_fields=['unit_price'])
+        self.client.force_authenticate(self.customer)
 
-    def test_approve_refund_rejects_wrong_status(self):
-        """Approving a refund on a pending order returns 400."""
+        response = self.client.post(
+            f'/api/orders/{order.id}/returns/',
+            {'order_item_id': order_item.id, 'quantity': 1},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        return_item = ReturnRequestItem.objects.get()
+        self.assertEqual(return_item.quantity, 1)
+        self.assertEqual(str(return_item.unit_refund_amount), '84.50')
+        self.assertEqual(str(return_item.subtotal_refund_amount), '84.50')
+
+    # ── Approve return edge cases ────────────────────────────────────────────
+
+    def test_approve_return_rejects_wrong_status(self):
+        """Approving a non-existing return for a pending order returns 400."""
         order = self._make_order(status='pending')
         self.client.force_authenticate(self.sales_manager)
         response = self.client.post(f'/api/orders/{order.id}/approve-refund/')
@@ -671,11 +703,16 @@ class OrderTransactionTests(APITestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'pending')
 
-    def test_approve_refund_rejects_non_sales_manager(self):
-        """Customers cannot approve refunds."""
-        order = self._make_order(status='return_requested')
+    def test_approve_return_rejects_non_sales_manager(self):
+        """Customers cannot approve returns."""
+        order = self._make_order(status='delivered')
+        return_request = self._make_return_request(order)
         self.client.force_authenticate(self.customer)
-        response = self.client.post(f'/api/orders/{order.id}/approve-refund/')
+        response = self.client.patch(
+            f'/api/orders/returns/{return_request.id}/',
+            {'status': 'approved'},
+            format='json',
+        )
         self.assertEqual(response.status_code, 403)
 
 
@@ -1011,7 +1048,7 @@ class SalesManagerInvoiceReportTests(APITestCase):
             total='50.00',
             quantity=1,
             unit_price='50.00',
-            status='returned',
+            status='delivered',
             invoice_number='INV-SUMMARY-RETURNED',
         )
         cancelled, _ = self._make_order(
@@ -1022,12 +1059,22 @@ class SalesManagerInvoiceReportTests(APITestCase):
             invoice_number='INV-SUMMARY-CANCELLED',
         )
         Order.objects.filter(id=delivered.id).update(created_at=today)
-        Order.objects.filter(id=returned.id).update(
-            created_at=today,
-            refund_approved_at=today,
-            refund_amount='50.00',
-        )
+        Order.objects.filter(id=returned.id).update(created_at=today)
         Order.objects.filter(id=cancelled.id).update(created_at=today)
+        return_request = ReturnRequest.objects.create(
+            customer=self.customer,
+            order=returned,
+            status='approved',
+            approved_at=today,
+            total_refund_amount='50.00',
+        )
+        ReturnRequestItem.objects.create(
+            return_request=return_request,
+            order_item=returned.items.first(),
+            quantity=1,
+            unit_refund_amount='50.00',
+            subtotal_refund_amount='50.00',
+        )
 
         response = self.client.get(
             f'/api/orders/reports/sales-summary/?from={today.date().isoformat()}&to={today.date().isoformat()}'

@@ -12,7 +12,7 @@ from accounts.serializers import ChangePasswordSerializer, UserRegistrationSeria
 from accounts.validators import get_customer_profile_errors
 from cart.models import Cart, CartItem
 from cart.serializers import AddCartItemSerializer, CartSerializer
-from orders.models import Delivery, Invoice, Order, OrderItem
+from orders.models import Invoice, Order, OrderItem
 from orders.serializers import OrderCreateSerializer
 from products.models import Brand, Category, Review, Sneaker, SneakerSize, Wishlist
 from products.serializers import SneakerPriceUpdateSerializer
@@ -478,7 +478,7 @@ class OrderFlowUnitTests(DemoDataMixin, TestCase):
 
     # Test 25
     def test_25_order_creation_finishes_within_timeout_and_creates_side_effects(self):
-        """Checks the full checkout side effects: total, invoice, delivery, and stock."""
+        """Checks the full checkout side effects: total, invoice, status, and stock."""
         # Arrange
         def timeout_handler(_signum, _frame):
             raise TestTimeoutExpired("Order creation exceeded the one-second limit.")
@@ -511,6 +511,7 @@ class OrderFlowUnitTests(DemoDataMixin, TestCase):
         # Assert
         self.assertEqual(order.total_price, Decimal("360.00"))
         self.assertTrue(Invoice.objects.filter(order=order).exists())
-        self.assertTrue(Delivery.objects.filter(order=order).exists())
+        self.assertEqual(order.status, "processing")
+        self.assertFalse(order.is_completed)
         self.size.refresh_from_db()
         self.assertEqual(self.size.stock, 3)

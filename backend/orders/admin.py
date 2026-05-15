@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem, Invoice, Delivery
+from .models import Order, OrderItem, Invoice, ReturnRequest, ReturnRequestItem
 
 
 class OrderItemInline(admin.TabularInline):
@@ -10,8 +10,8 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'status', 'total_price', 'created_at']
-    list_filter = ['status']
+    list_display = ['id', 'customer', 'status', 'total_price', 'is_completed', 'created_at']
+    list_filter = ['status', 'is_completed']
     search_fields = ['customer__email']
     readonly_fields = ['created_at', 'updated_at']
     inlines = [OrderItemInline]
@@ -23,7 +23,16 @@ class InvoiceAdmin(admin.ModelAdmin):
     readonly_fields = ['issued_at']
 
 
-@admin.register(Delivery)
-class DeliveryAdmin(admin.ModelAdmin):
-    list_display = ['order', 'status', 'is_completed', 'dispatched_at', 'delivered_at']
-    list_filter = ['status', 'is_completed']
+class ReturnRequestItemInline(admin.TabularInline):
+    model = ReturnRequestItem
+    extra = 0
+    readonly_fields = ['subtotal_refund_amount']
+
+
+@admin.register(ReturnRequest)
+class ReturnRequestAdmin(admin.ModelAdmin):
+    list_display = ['id', 'order', 'customer', 'status', 'total_refund_amount', 'requested_at']
+    list_filter = ['status']
+    search_fields = ['customer__email', 'order__id']
+    readonly_fields = ['requested_at', 'received_at', 'approved_at', 'rejected_at']
+    inlines = [ReturnRequestItemInline]

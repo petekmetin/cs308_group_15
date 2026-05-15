@@ -13,11 +13,10 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('processing', 'Processing'),
-        ('shipped', 'Shipped'),
+        ('in_transit', 'In Transit'),
         ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
-        ('return_requested', 'Return Requested'),
-        ('returned', 'Returned'),
+        ('failed', 'Failed'),
     ]
 
     customer = models.ForeignKey(
@@ -43,7 +42,7 @@ class Order(models.Model):
     # Payment
     credit_card_last4 = models.CharField(max_length=4, blank=True)
 
-    # Refund tracking
+    # Legacy order-level refund totals are retained for reports/backward compatibility.
     refund_requested_at = models.DateTimeField(null=True, blank=True)
     refund_approved_at = models.DateTimeField(null=True, blank=True)
     refund_amount = models.DecimalField(
@@ -52,6 +51,13 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+
+    # Fulfillment fields live on the order so status has one source of truth.
+    tracking_number = models.CharField(max_length=100, blank=True)
+    is_completed = models.BooleanField(default=False)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    delivery_notes = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -134,43 +140,57 @@ class Invoice(models.Model):
         return f'Invoice {self.invoice_number} for Order #{self.order.id}'
 
 
-class Delivery(models.Model):
-    """
-    Delivery tracking. Product managers use this to manage shipments.
-    Matches the brief's delivery list requirements:
-    delivery ID, customer ID, product ID, quantity, total price,
-    delivery address, and completion status.
-    """
+class ReturnRequest(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('processing', 'Processing'),
-        ('in_transit', 'In Transit'),
-        ('delivered', 'Delivered'),
-        ('cancelled', 'Cancelled'),
-        ('return_requested', 'Return Requested'),
-        ('returned', 'Returned'),
-        ('failed', 'Failed'),
+        ('requested', 'Requested'),
+        ('received', 'Received'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
     ]
 
-    order = models.OneToOneField(
-        Order,
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name='delivery'
+        related_name='return_requests'
     )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='processing'
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='return_requests'
     )
-    tracking_number = models.CharField(max_length=100, blank=True)
-    delivery_address = models.TextField()
-    is_completed = models.BooleanField(default=False)
-    dispatched_at = models.DateTimeField(null=True, blank=True)
-    delivered_at = models.DateTimeField(null=True, blank=True)
-    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='requested')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    received_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    total_refund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    manager_note = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'deliveries'
+        db_table = 'return_requests'
+        ordering = ['-requested_at']
 
     def __str__(self):
-        return f'Delivery for Order #{self.order.id} ({self.status})'
+        return f'Return request #{self.id} for Order #{self.order_id} ({self.status})'
+
+
+class ReturnRequestItem(models.Model):
+    return_request = models.ForeignKey(
+        ReturnRequest,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    order_item = models.ForeignKey(
+        OrderItem,
+        on_delete=models.PROTECT,
+        related_name='return_request_items'
+    )
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
+    unit_refund_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal_refund_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = 'return_request_items'
+
+    def __str__(self):
+        return f'Return item #{self.id} x{self.quantity}'

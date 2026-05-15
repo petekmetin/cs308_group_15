@@ -2,7 +2,7 @@ from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from accounts.validators import get_customer_profile_errors
-from .models import Order, OrderItem, Invoice, Delivery
+from .models import Order, OrderItem, Invoice, ReturnRequest, ReturnRequestItem
 from products.serializers import SneakerListSerializer, build_media_url
 from products.models import Sneaker, SneakerSize
 
@@ -12,6 +12,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     subtotal = serializers.ReadOnlyField()
     size_value = serializers.CharField(source='size.size', read_only=True)
     size_system = serializers.CharField(source='size.size_system', read_only=True)
+    returnable_quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
@@ -25,8 +26,23 @@ class OrderItemSerializer(serializers.ModelSerializer):
             'quantity',
             'unit_price',
             'subtotal',
+            'returnable_quantity',
         ]
         read_only_fields = ['unit_price']
+
+    def get_returnable_quantity(self, obj):
+        returned = 0
+        for request_item in getattr(obj, 'prefetched_return_request_items', []):
+            if request_item.return_request.status in {'requested', 'received', 'approved'}:
+                returned += request_item.quantity
+        if not hasattr(obj, 'prefetched_return_request_items'):
+            returned = sum(
+                item.quantity
+                for item in obj.return_request_items.select_related('return_request').filter(
+                    return_request__status__in=['requested', 'received', 'approved']
+                )
+            )
+        return max(int(obj.quantity or 0) - int(returned or 0), 0)
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
@@ -130,13 +146,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             invoice_number=f'INV-{uuid.uuid4().hex[:8].upper()}'
         )
 
-        # Auto-create delivery record
-        Delivery.objects.create(
-            order=order,
-            status='processing',
-            delivery_address=order.delivery_address
-        )
-
         return order
 
 
@@ -147,7 +156,9 @@ class OrderSerializer(serializers.ModelSerializer):
     delivery_id = serializers.SerializerMethodField()
     delivery_status = serializers.SerializerMethodField()
     delivery_status_label = serializers.SerializerMethodField()
-    delivery_is_completed = serializers.SerializerMethodField()
+    delivery_is_completed = serializers.BooleanField(source='is_completed', read_only=True)
+    delivered_at = serializers.DateTimeField(read_only=True)
+    return_requests = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -157,6 +168,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'invoice_number', 'delivery_id', 'delivery_status',
             'delivery_status_label', 'delivery_is_completed',
             'items', 'refund_requested_at', 'refund_approved_at', 'refund_amount',
+            'tracking_number', 'dispatched_at', 'delivered_at', 'delivery_notes',
+            'return_requests',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'customer', 'total_price', 'created_at', 'updated_at']
@@ -168,28 +181,19 @@ class OrderSerializer(serializers.ModelSerializer):
             return None
 
     def get_delivery_id(self, obj):
-        try:
-            return obj.delivery.id
-        except ObjectDoesNotExist:
-            return None
-
-    def get_delivery_is_completed(self, obj):
-        try:
-            return bool(obj.delivery.is_completed)
-        except ObjectDoesNotExist:
-            return None
+        return obj.id
 
     def get_delivery_status(self, obj):
-        try:
-            return obj.delivery.status
-        except ObjectDoesNotExist:
-            return None
+        return obj.status
 
     def get_delivery_status_label(self, obj):
-        try:
-            return obj.delivery.get_status_display()
-        except ObjectDoesNotExist:
-            return None
+        return obj.get_status_display()
+
+    def get_return_requests(self, obj):
+        requests = getattr(obj, 'prefetched_return_requests', None)
+        if requests is None:
+            requests = obj.return_requests.prefetch_related('items').all()[:10]
+        return ReturnRequestSummarySerializer(requests, many=True).data
 
 
 class DeliveryOrderItemSerializer(serializers.ModelSerializer):
@@ -248,14 +252,89 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 
 
 class DeliverySerializer(serializers.ModelSerializer):
-    order = DeliveryOrderSerializer(read_only=True)
-    order_id = serializers.IntegerField(source='order.id', read_only=True)
-    invoice_number = serializers.CharField(source='order.invoice.invoice_number', read_only=True)
+    order = DeliveryOrderSerializer(source='*', read_only=True)
+    order_id = serializers.IntegerField(source='id', read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    notes = serializers.CharField(source='delivery_notes', read_only=True)
 
     class Meta:
-        model = Delivery
+        model = Order
         fields = [
             'id', 'order', 'order_id', 'status', 'tracking_number',
             'delivery_address', 'is_completed',
             'dispatched_at', 'delivered_at', 'notes', 'invoice_number'
+        ]
+
+
+class ReturnRequestItemSerializer(serializers.ModelSerializer):
+    order_item_id = serializers.IntegerField(source='order_item.id', read_only=True)
+    sneaker = serializers.IntegerField(source='order_item.sneaker_id', read_only=True)
+    sneaker_name = serializers.CharField(source='order_item.sneaker.name', read_only=True)
+    sneaker_brand = serializers.CharField(source='order_item.sneaker.brand.name', read_only=True)
+    size_value = serializers.CharField(source='order_item.size.size', read_only=True)
+    size_system = serializers.CharField(source='order_item.size.size_system', read_only=True)
+
+    class Meta:
+        model = ReturnRequestItem
+        fields = [
+            'id',
+            'order_item_id',
+            'sneaker',
+            'sneaker_name',
+            'sneaker_brand',
+            'size_value',
+            'size_system',
+            'quantity',
+            'unit_refund_amount',
+            'subtotal_refund_amount',
+        ]
+
+
+class ReturnRequestSummarySerializer(serializers.ModelSerializer):
+    items_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReturnRequest
+        fields = [
+            'id',
+            'status',
+            'requested_at',
+            'received_at',
+            'approved_at',
+            'rejected_at',
+            'total_refund_amount',
+            'manager_note',
+            'items_count',
+        ]
+
+    def get_items_count(self, obj):
+        items = getattr(obj, 'items', None)
+        if hasattr(items, 'all'):
+            return sum(item.quantity for item in items.all())
+        return obj.items.count()
+
+
+class ReturnRequestSerializer(serializers.ModelSerializer):
+    customer_email = serializers.CharField(source='customer.email', read_only=True)
+    order_status = serializers.CharField(source='order.status', read_only=True)
+    order_total = serializers.DecimalField(source='order.total_price', max_digits=10, decimal_places=2, read_only=True)
+    items = ReturnRequestItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ReturnRequest
+        fields = [
+            'id',
+            'order',
+            'customer',
+            'customer_email',
+            'order_status',
+            'order_total',
+            'status',
+            'requested_at',
+            'received_at',
+            'approved_at',
+            'rejected_at',
+            'total_refund_amount',
+            'manager_note',
+            'items',
         ]
