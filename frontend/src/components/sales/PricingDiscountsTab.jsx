@@ -47,6 +47,11 @@ function normalizeProduct(product) {
   };
 }
 
+function notificationText(count) {
+  const safeCount = Number(count || 0);
+  return `Notified ${safeCount} wishlist customer(s).`;
+}
+
 function PricingDiscountsTab({ accessToken }) {
   const [products, setProducts] = useState([]);
   const [editForms, setEditForms] = useState({});
@@ -62,6 +67,7 @@ function PricingDiscountsTab({ accessToken }) {
   const [batchSaving, setBatchSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
   const [error, setError] = useState("");
 
   const selectedCount = selectedIds.size;
@@ -179,6 +185,7 @@ function PricingDiscountsTab({ accessToken }) {
     setSavingId(product.id);
     setError("");
     setStatusMessage("");
+    setNotificationMessage("");
     try {
       const payload = await fetchJson(`/api/products/sneakers/${product.id}/set-price/`, {
         method: "PATCH",
@@ -196,9 +203,8 @@ function PricingDiscountsTab({ accessToken }) {
           discount_percentage: String(updated.discount_percentage ?? "0"),
         },
       }));
-      setStatusMessage(
-        `Updated ${product.name}. Notified ${payload.notification_count || 0} wishlist customer(s).`
-      );
+      setStatusMessage(`Updated ${product.name}.`);
+      setNotificationMessage(notificationText(payload.notification_count));
     } catch (err) {
       setError(err.message || "Could not update pricing.");
     } finally {
@@ -216,6 +222,7 @@ function PricingDiscountsTab({ accessToken }) {
     setBatchSaving(true);
     setError("");
     setStatusMessage("");
+    setNotificationMessage("");
     try {
       const payload = await fetchJson("/api/products/sneakers/batch-discount/", {
         method: "PATCH",
@@ -225,9 +232,8 @@ function PricingDiscountsTab({ accessToken }) {
           discount_percentage: batchDiscount,
         },
       });
-      setStatusMessage(
-        `Updated ${payload.updated_count || 0} product(s). Notified ${payload.notification_count || 0} wishlist customer(s).`
-      );
+      setStatusMessage(`Updated ${payload.updated_count || 0} product(s).`);
+      setNotificationMessage(notificationText(payload.notification_count));
       setBatchDiscount("");
       await loadProducts();
     } catch (err) {
@@ -291,6 +297,7 @@ function PricingDiscountsTab({ accessToken }) {
       </form>
 
       {statusMessage ? <p className="manager-status">{statusMessage}</p> : null}
+      {notificationMessage ? <p className="manager-status">{notificationMessage}</p> : null}
       {error ? <p className="manager-error">{error}</p> : null}
       {appliedSearch ? <p className="manager-status">Showing results for: "{appliedSearch}"</p> : null}
 
