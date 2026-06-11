@@ -57,6 +57,37 @@ function getDisplayStatus(order) {
   return order.status;
 }
 
+const RETURN_STATUS_META = {
+  requested: { label: "Return Requested", className: "order-item-return-requested" },
+  received: { label: "Return Received", className: "order-item-return-received" },
+  approved: { label: "Returned", className: "order-item-returned" },
+};
+
+function buildReturnStatusByItem(order) {
+  const priority = { requested: 1, received: 2, approved: 3 };
+  const result = {};
+  (order.return_requests || []).forEach((returnRequest) => {
+    const status = returnRequest.status;
+    if (!RETURN_STATUS_META[status]) {
+      return;
+    }
+    (returnRequest.items || []).forEach((returnItem) => {
+      const itemId = returnItem.order_item_id;
+      if (!itemId) {
+        return;
+      }
+      const previous = result[itemId];
+      if (!previous || priority[status] > priority[previous.status]) {
+        result[itemId] = {
+          status,
+          quantity: Number(returnItem.quantity || 0),
+        };
+      }
+    });
+  });
+  return result;
+}
+
 function OrdersPage({ cartCount }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,6 +245,7 @@ function OrdersPage({ cartCount }) {
             {orders.map((order) => {
               const isCancellable = ["pending", "processing"].includes(order.status);
               const displayStatus = getDisplayStatus(order);
+              const returnStatusByItem = buildReturnStatusByItem(order);
               return (
                 <article key={order.id} className="cart-item-card" style={{ flexDirection: "column", alignItems: "stretch" }}>
                   <header
@@ -250,9 +282,13 @@ function OrdersPage({ cartCount }) {
                       const image = item.sneaker_detail?.primary_image;
                       const returnableQuantity = Number(item.returnable_quantity || 0);
                       const canReturnItem = order.status === "delivered" && returnableQuantity > 0;
+                      const returnStatus = returnStatusByItem[item.id];
+                      const returnMeta = RETURN_STATUS_META[returnStatus?.status];
+                      const returnedQuantity = Number(returnStatus?.quantity || 0);
                       return (
                         <div
                           key={item.id}
+                          className={`order-item-return-row ${returnMeta ? "has-return-status" : ""}`}
                           style={{
                             display: "flex",
                             gap: "0.75rem",
@@ -262,6 +298,12 @@ function OrdersPage({ cartCount }) {
                             padding: "0.6rem 0.75rem",
                           }}
                         >
+                          {returnMeta ? (
+                            <div className={`order-item-return-overlay ${returnMeta.className}`}>
+                              <span>{returnMeta.label}</span>
+                              {returnedQuantity > 0 ? <small>Qty {returnedQuantity}</small> : null}
+                            </div>
+                          ) : null}
                           <div
                             style={{
                               width: 56,
