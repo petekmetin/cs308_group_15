@@ -250,9 +250,13 @@ function SneakerDetail({ onAddToCart, cartCount = 0 }) {
     sneaker.images?.find((image) => image.is_primary)?.image_url ||
     sneaker.images?.[0]?.image_url ||
     "";
-  const displayPrice = sneaker.discounted_price ?? sneaker.price ?? "-";
-  const hasDiscount =
-    sneaker.discounted_price && sneaker.discounted_price !== sneaker.price;
+  const basePrice = Number(sneaker.price ?? 0);
+  const salePrice = Number(sneaker.discounted_price ?? sneaker.price ?? 0);
+  const discount = Number(sneaker.discount_percentage || 0);
+  const hasDiscount = discount > 0 && basePrice > salePrice;
+  const displayPrice = hasDiscount
+    ? sneaker.discounted_price
+    : sneaker.price ?? sneaker.discounted_price ?? "-";
 
   const ratingCount = Number(sneaker.rating_count ?? reviews.length ?? 0);
   const averageRating = Number(sneaker.average_rating ?? 0);

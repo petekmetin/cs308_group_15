@@ -290,8 +290,17 @@ class ReturnRequestItemSerializer(serializers.ModelSerializer):
         ]
 
 
+class ReturnRequestSummaryItemSerializer(serializers.ModelSerializer):
+    order_item_id = serializers.IntegerField(source='order_item.id', read_only=True)
+
+    class Meta:
+        model = ReturnRequestItem
+        fields = ['id', 'order_item_id', 'quantity']
+
+
 class ReturnRequestSummarySerializer(serializers.ModelSerializer):
     items_count = serializers.SerializerMethodField()
+    items = ReturnRequestSummaryItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = ReturnRequest
@@ -305,6 +314,7 @@ class ReturnRequestSummarySerializer(serializers.ModelSerializer):
             'total_refund_amount',
             'manager_note',
             'items_count',
+            'items',
         ]
 
     def get_items_count(self, obj):
