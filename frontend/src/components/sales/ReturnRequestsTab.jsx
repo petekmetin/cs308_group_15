@@ -44,6 +44,7 @@ function ReturnRequestsTab({ accessToken }) {
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const counts = useMemo(() => {
     const result = { requested: 0, received: 0, approved: 0, rejected: 0 };
@@ -63,6 +64,7 @@ function ReturnRequestsTab({ accessToken }) {
   const loadRequests = async () => {
     setLoading(true);
     setError("");
+    setSuccessMessage("");
     try {
       const payload = await fetchJson("/api/orders/returns/", { token: accessToken });
       const list = normalizeList(payload);
@@ -85,11 +87,13 @@ function ReturnRequestsTab({ accessToken }) {
 
   useEffect(() => {
     setManagerNote(selectedRequest?.manager_note || "");
+    setSuccessMessage("");
   }, [selectedRequest]);
 
   const updateRequest = async (requestId, status) => {
     setUpdatingStatus(status);
     setError("");
+    setSuccessMessage("");
     try {
       const updated = await fetchJson(`/api/orders/returns/${requestId}/`, {
         method: "PATCH",
@@ -99,6 +103,15 @@ function ReturnRequestsTab({ accessToken }) {
       setRequests((prev) => prev.map((request) => (request.id === requestId ? updated : request)));
       setSelectedRequest(updated);
       setActiveFilter(updated.status);
+      if (status === "approved") {
+        if (updated.refund_email_sent) {
+          setSuccessMessage(`Refund approved successfully. Notification email sent to ${updated.customer_email || "customer"}.`);
+        } else {
+          setSuccessMessage("Refund approved successfully, but notification email could not be sent.");
+        }
+      } else {
+        setSuccessMessage(`Return request status updated to "${titleStatus(status)}".`);
+      }
     } catch (err) {
       setError(err.message || "Could not update return request.");
     } finally {
@@ -121,6 +134,7 @@ function ReturnRequestsTab({ accessToken }) {
       </div>
 
       {error ? <p className="manager-error">{error}</p> : null}
+      {successMessage ? <p className="manager-status">{successMessage}</p> : null}
 
       <div className="manager-filter-row">
         {STATUS_OPTIONS.map((status) => (
@@ -128,7 +142,11 @@ function ReturnRequestsTab({ accessToken }) {
             key={status}
             type="button"
             className={`manager-filter-pill ${activeFilter === status ? "active" : ""}`}
-            onClick={() => setActiveFilter(status)}
+            onClick={() => {
+              setActiveFilter(status);
+              setSuccessMessage("");
+              setError("");
+            }}
           >
             {titleStatus(status)} ({counts[status] || 0})
           </button>

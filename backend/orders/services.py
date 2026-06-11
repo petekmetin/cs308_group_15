@@ -1,9 +1,12 @@
+import logging
 import os
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -122,3 +125,28 @@ def email_invoice_pdf(invoice):
     message.attach_file(pdf_path, mimetype="application/pdf")
     message.send(fail_silently=False)
     return True
+
+
+def email_refund_approved_notification(return_request):
+    try:
+        order = return_request.order
+        customer = return_request.customer
+        subject = f"Your SoleVault refund for Order #{order.id} has been approved"
+        body = (
+            f"Hi {customer.first_name or customer.username or 'Customer'},\n\n"
+            f"We are pleased to inform you that your refund request for Order #{order.id} has been approved.\n"
+            f"A total refund of {_money(return_request.total_refund_amount)} has been issued.\n\n"
+            f"Thank you for shopping with SoleVault.\n\n"
+            f"SoleVault"
+        )
+        message = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[customer.email],
+        )
+        message.send(fail_silently=False)
+        return True
+    except Exception as e:
+        logger.exception("Refund approval email failed for request %s", return_request.id)
+        return False

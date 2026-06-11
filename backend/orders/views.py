@@ -20,7 +20,7 @@ from .serializers import (
     OrderSerializer, OrderCreateSerializer,
     InvoiceSerializer, InvoiceListSerializer, DeliverySerializer, ReturnRequestSerializer
 )
-from .services import email_invoice_pdf, generate_invoice_pdf
+from .services import email_invoice_pdf, generate_invoice_pdf, email_refund_approved_notification
 from config.permissions import IsCustomer, IsSalesManager, IsProductManager
 from products.models import Sneaker, SneakerImage
 from products.querysets import sneaker_summary_queryset
@@ -384,8 +384,15 @@ def return_request_detail(request, pk):
             order.save(update_fields=['refund_approved_at', 'refund_amount'])
         return_request.save()
 
+    refund_email_sent = None
+    if new_status == 'approved':
+        refund_email_sent = email_refund_approved_notification(return_request)
+
     return_request = return_request_queryset().get(pk=return_request.pk)
-    return Response(ReturnRequestSerializer(return_request).data)
+    data = ReturnRequestSerializer(return_request).data
+    if refund_email_sent is not None:
+        data['refund_email_sent'] = refund_email_sent
+    return Response(data)
 
 
 @api_view(['POST'])
@@ -420,8 +427,13 @@ def approve_refund(request, pk):
             for req in ReturnRequest.objects.filter(order=order, status='approved')
         )
         order.save(update_fields=['refund_approved_at', 'refund_amount'])
+
+    refund_email_sent = email_refund_approved_notification(return_request)
+
     return_request = return_request_queryset().get(pk=return_request.pk)
-    return Response(ReturnRequestSerializer(return_request).data)
+    data = ReturnRequestSerializer(return_request).data
+    data['refund_email_sent'] = refund_email_sent
+    return Response(data)
 
 
 # ─── Invoices ─────────────────────────────────────────────────────────────────
