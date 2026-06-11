@@ -34,7 +34,6 @@ const DELIVERY_SECTIONS = [
   { id: "delivered", title: "Delivered" },
   { id: "failed", title: "Failed" },
   { id: "cancelled", title: "Cancelled" },
-  { id: "returned_refunded", title: "Returned/Refunded" },
 ];
 
 const STATUS_LABEL = {
