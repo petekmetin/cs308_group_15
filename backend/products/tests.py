@@ -1,4 +1,5 @@
 import tempfile
+from datetime import timedelta
 from io import BytesIO
 from unittest.mock import patch
 
@@ -9,6 +10,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.test import override_settings
+from django.utils import timezone
+from orders.models import Invoice, Order
 from PIL import Image
 from rest_framework.test import APITestCase
 
@@ -227,24 +230,98 @@ class DemoFlowCommandTests(APITestCase):
         call_command('prepare_demo_flow')
         call_command('prepare_demo_flow')
 
+        user_model = get_user_model()
+        customer = user_model.objects.get(email='cemsarptakim@gmail.com')
+        sales_manager = user_model.objects.get(email='sales@gmail.com')
+        product_manager = user_model.objects.get(email='product@gmail.com')
+
+        self.assertEqual(customer.role, 'customer')
+        self.assertEqual(customer.tax_id, 'TR-FINAL-DEMO-001')
+        self.assertIn('Final Demo Apartment', customer.home_address)
+        self.assertTrue(customer.check_password('Cemsarp1234'))
+        self.assertEqual(sales_manager.role, 'sales_manager')
+        self.assertTrue(sales_manager.check_password('Cemsarp1234'))
+        self.assertEqual(product_manager.role, 'product_manager')
+        self.assertTrue(product_manager.check_password('Cemsarp1234'))
+
         products = {
             sneaker.sku: sneaker
             for sneaker in Sneaker.objects.filter(
-                sku__in=['DEMO-PRODUCT-A', 'DEMO-PRODUCT-B', 'DEMO-PRODUCT-C']
+                sku__in=[
+                    'DEMO-PRODUCT-A',
+                    'DEMO-PRODUCT-B',
+                    'DEMO-PRODUCT-C',
+                    'DEMO-PRODUCT-E',
+                    'DEMO-PRODUCT-F',
+                    'DEMO-PRODUCT-G',
+                    'DEMO-PRODUCT-H',
+                ]
             ).prefetch_related('sizes')
         }
 
-        self.assertEqual(set(products), {'DEMO-PRODUCT-A', 'DEMO-PRODUCT-B', 'DEMO-PRODUCT-C'})
+        self.assertEqual(
+            set(products),
+            {
+                'DEMO-PRODUCT-A',
+                'DEMO-PRODUCT-B',
+                'DEMO-PRODUCT-C',
+                'DEMO-PRODUCT-E',
+                'DEMO-PRODUCT-F',
+                'DEMO-PRODUCT-G',
+                'DEMO-PRODUCT-H',
+            },
+        )
+        self.assertFalse(Sneaker.objects.filter(sku='DEMO-PRODUCT-D').exists())
+        self.assertFalse(Category.objects.filter(slug='final-demo-manager-category').exists())
+
         self.assertEqual(products['DEMO-PRODUCT-A'].total_stock, 0)
         self.assertFalse(products['DEMO-PRODUCT-A'].is_in_stock)
         self.assertEqual(products['DEMO-PRODUCT-B'].total_stock, 1)
         self.assertTrue(products['DEMO-PRODUCT-B'].is_in_stock)
         self.assertGreater(products['DEMO-PRODUCT-C'].total_stock, 1)
         self.assertTrue(products['DEMO-PRODUCT-C'].is_in_stock)
+        self.assertFalse(
+            Wishlist.objects.filter(
+                customer=customer,
+                sneaker=products['DEMO-PRODUCT-C'],
+            ).exists()
+        )
 
         self.assertEqual(
             SneakerSize.objects.filter(sneaker__sku__in=products.keys()).count(),
-            3,
+            7,
+        )
+
+        orders_by_sku = {}
+        for sku in ['DEMO-PRODUCT-E', 'DEMO-PRODUCT-F', 'DEMO-PRODUCT-G', 'DEMO-PRODUCT-H']:
+            orders_by_sku[sku] = Order.objects.get(
+                customer=customer,
+                items__sneaker__sku=sku,
+            )
+
+        now = timezone.now()
+        self.assertEqual(orders_by_sku['DEMO-PRODUCT-E'].status, 'delivered')
+        self.assertLess(
+            orders_by_sku['DEMO-PRODUCT-E'].delivered_at,
+            now - timedelta(days=30),
+        )
+        self.assertEqual(orders_by_sku['DEMO-PRODUCT-F'].status, 'delivered')
+        self.assertGreater(
+            orders_by_sku['DEMO-PRODUCT-F'].delivered_at,
+            now - timedelta(days=30),
+        )
+        self.assertEqual(orders_by_sku['DEMO-PRODUCT-G'].status, 'processing')
+        self.assertIsNone(orders_by_sku['DEMO-PRODUCT-G'].delivered_at)
+        self.assertEqual(orders_by_sku['DEMO-PRODUCT-H'].status, 'in_transit')
+        self.assertIsNotNone(orders_by_sku['DEMO-PRODUCT-H'].dispatched_at)
+
+        for order in orders_by_sku.values():
+            self.assertTrue(Invoice.objects.filter(order=order).exists())
+            self.assertEqual(order.delivery_address, customer.home_address)
+
+        self.assertEqual(
+            Order.objects.filter(customer=customer, items__sneaker__sku__startswith='DEMO-PRODUCT').distinct().count(),
+            4,
         )
 
 
